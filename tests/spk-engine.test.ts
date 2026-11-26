@@ -244,3 +244,29 @@ test("Audit R1 (Farrel Ega Nur Royyan) memakai rumus AHP Kelompok 12 (AVERAGE CV
   assertClose(farrelAhp.cr, 0.32143442, 1e-7);
   assert.equal(farrelAhp.isConsistent, false);
 });
+
+test("Bobot Geometric Mean (AIJ) 10 responden menghasilkan bobot konsisten dan total = 1", () => {
+  const criteria = buildCriteriaFixtures();
+  const individualResults = SEED_AHP_RESPONDENTS.map((resp) =>
+    computeAhp(criteria, buildMatrixFromUpperPairs(criteria, resp.upperPairs))
+  );
+  const avg = computeAhpAverageResult(criteria, individualResults);
+  const geo = avg.groupGeometricAhp;
+
+  const expectedGeoWeights = [
+    0.1961336, // Harga
+    0.28096761, // Prosesor
+    0.16477268, // RAM
+    0.17622815, // Penyimpanan
+    0.06726427, // Baterai
+    0.11463368, // Kamera
+  ];
+  geo.weights.forEach((w, idx) => assertClose(w, expectedGeoWeights[idx], 1e-7));
+  assertClose(
+    geo.weights.reduce((a, b) => a + b, 0),
+    1,
+    1e-12
+  );
+  assert.equal(geo.isConsistent, true);
+  assertClose(geo.cr, 0.06087807, 1e-7);
+});

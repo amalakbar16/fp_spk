@@ -110,7 +110,7 @@ export interface SensitivityResult {
   rows: SensitivityRow[];
 }
 
-export type WeightSourceMode = "average" | "respondent";
+export type WeightSourceMode = "average" | "geomean" | "respondent";
 
 export interface AhpRespondent {
   id: number;
@@ -128,6 +128,7 @@ export interface AhpAverageResult {
   cr: number;
   isConsistent: boolean;
   weights: number[];
+  groupGeometricAhp: AhpResult;
 }
 
 export interface SpkWeightSourceInfo {

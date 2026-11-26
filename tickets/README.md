@@ -49,3 +49,5 @@ Folder `tickets/` digunakan untuk mendokumentasikan **setiap rencana, setup awal
 | `013` | Menu Khusus Geometric Mean (AIJ) & Perbandingan Terhadap Rata-rata Bobot AIP | `DONE` | [013-menu-geometric-mean-dan-perbandingan-aip.md](./013-menu-geometric-mean-dan-perbandingan-aip.md) |
 | `014` | Penghapusan Geometric Mean (AIP Murni) & Penyederhanaan Teks UI Redundan | `DONE` | [014-hapus-geomean-dan-ringkas-ui.md](./014-hapus-geomean-dan-ringkas-ui.md) |
 | `015` | Penyeragaman Tampilan CR (4 Desimal + Status Konsisten) & Penghapusan Keterangan Target 30 | `DONE` | [015-seragamkan-tampilan-cr-dan-hapus-target-30.md](./015-seragamkan-tampilan-cr-dan-hapus-target-30.md) |
+| `016` | Penambahan Fitur & Menu Geometric Mean (AIJ) dengan Tampilan CR Seragam | `DONE` | [016-tambahkan-kembali-geometric-mean.md](./016-tambahkan-kembali-geometric-mean.md) |
+| `017` | Tampilan Perhitungan Langkah Demi Langkah AIP pada Menu Kriteria & AHP | `DONE` | [017-tampilan-perhitungan-aip-di-menu-ahp.md](./017-tampilan-perhitungan-aip-di-menu-ahp.md) |

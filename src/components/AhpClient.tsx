@@ -1,6 +1,15 @@
 "use client";
 
-import { ArrowLeft, Edit3, Eye, Users, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Edit3,
+  Eye,
+  GitMerge,
+  Users,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDecimal, formatPercent } from "@/lib/format";
@@ -89,6 +98,36 @@ export function AhpClient() {
     );
   }, [data]);
 
+  const aipStats = useMemo(() => {
+    if (!data) return null;
+    const { criteria, respondents } = data;
+    const count = respondents.length;
+    const weightSums = criteria.map((_, j) =>
+      respondents.reduce((acc, r) => acc + (r.ahp.weights[j] ?? 0), 0)
+    );
+    const rawMeans = weightSums.map((sum) => (count > 0 ? sum / count : 0));
+    const rawMeanTotal = rawMeans.reduce((acc, w) => acc + w, 0);
+
+    const crSum = respondents.reduce((acc, r) => acc + r.ahp.cr, 0);
+    const avgLambdaMax =
+      count > 0
+        ? respondents.reduce((acc, r) => acc + r.ahp.lambdaMax, 0) / count
+        : 0;
+    const avgCi =
+      count > 0
+        ? respondents.reduce((acc, r) => acc + r.ahp.ci, 0) / count
+        : 0;
+
+    return {
+      weightSums,
+      rawMeans,
+      rawMeanTotal,
+      crSum,
+      avgLambdaMax,
+      avgCi,
+    };
+  }, [data]);
+
   async function handleSaveCriterion(e: React.FormEvent) {
     e.preventDefault();
     if (!editingCrit) return;
@@ -121,7 +160,7 @@ export function AhpClient() {
     );
   }
 
-  if (!data) {
+  if (!data || !aipStats) {
     return (
       <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 text-sm text-rose-800">
         {error || "Gagal memuat halaman AHP."}
@@ -141,8 +180,10 @@ export function AhpClient() {
             Kriteria &amp; Pembobotan AHP
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Daftar kriteria penilaian, rekap bobot rata-rata responden (AIP),
-            dan rincian matriks perbandingan tiap responden.
+            Tahapan perhitungan bobot kriteria AHP untuk mode{" "}
+            <strong>Rata-rata AIP</strong>,{" "}
+            <strong>Geometric Mean (AIJ)</strong>, dan{" "}
+            <strong>Per Responden</strong>.
           </p>
         </div>
         <Link
@@ -252,139 +293,400 @@ export function AhpClient() {
         </div>
       </section>
 
-      {/* OPSI 1: REKAP RATA-RATA BOBOT RESPONDEN (AIP) */}
+      {/* OPSI 1: PERHITUNGAN LANGKAH DEMI LANGKAH RATA-RATA AIP */}
       {activeSource.mode === "average" && (
-        <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
-                2. Rekap Bobot AHP Responden &amp; Rata-rata AIP (n ={" "}
-                {respondents.length})
-              </h2>
-              <p className="text-xs text-slate-500">
-                Bobot prioritas masing-masing responden dirata-ratakan per
-                kriteria (Tabel 2 paper acuan).
-              </p>
+        <>
+          {/* Tahap 1 AIP: Penjumlahan, Rata-rata, dan Normalisasi Bobot */}
+          <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  2. Perhitungan Rata-rata Bobot Prioritas (Metode AIP · n ={" "}
+                  {respondents.length})
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Bobot prioritas masing-masing responden dijumlahkan per
+                  kriteria (&Sigma;w<sub>k,j</sub>), dibagi jumlah responden (
+                  &Sigma;w<sub>k,j</sub> / {respondents.length}), lalu
+                  dinormalisasi sehingga total bobot = 1,0000.
+                </p>
+              </div>
+              <Link
+                href="/geometric-mean"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shrink-0 self-start sm:self-center"
+              >
+                <GitMerge className="h-3.5 w-3.5 text-indigo-600" />
+                <span>Bandingkan dengan AIJ</span>
+              </Link>
             </div>
-            <Link
-              href="/responden"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700 shrink-0 self-start sm:self-center"
-            >
-              <Users className="h-3.5 w-3.5" />
-              <span>Edit di Data Responden</span>
-            </Link>
-          </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs border border-slate-200 border-collapse">
-              <thead>
-                <tr className="bg-slate-50 text-slate-700 font-semibold">
-                  <th className="border border-slate-200 p-2 text-left">Kode</th>
-                  <th className="border border-slate-200 p-2 text-left">
-                    Responden
-                  </th>
-                  {criteria.map((c) => (
-                    <th
-                      key={c.id}
-                      className="border border-slate-200 p-2 text-right whitespace-nowrap"
-                    >
-                      {c.code} · {c.name}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border border-slate-200 border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-700 font-semibold">
+                    <th className="border border-slate-200 p-2 text-left">
+                      Sumber Vektor Bobot
                     </th>
-                  ))}
-                  <th className="border border-slate-200 p-2 text-center">
-                    CR Individu
-                  </th>
-                  <th className="border border-slate-200 p-2 text-right">
-                    Rincian
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {respondents.map((resp) => (
-                  <tr key={resp.id} className="hover:bg-slate-50">
-                    <td className="border border-slate-200 p-2 font-mono font-semibold text-slate-800">
-                      {resp.code}
-                    </td>
+                    {criteria.map((c) => (
+                      <th
+                        key={c.id}
+                        className="border border-slate-200 p-2 text-right whitespace-nowrap"
+                      >
+                        {c.code} · {c.name}
+                      </th>
+                    ))}
+                    <th className="border border-slate-200 p-2 text-right bg-slate-100 whitespace-nowrap">
+                      Jumlah Baris (&Sigma;)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {respondents.map((resp) => {
+                    const rowSum = resp.ahp.weights.reduce((a, b) => a + b, 0);
+                    return (
+                      <tr key={resp.id} className="hover:bg-slate-50">
+                        <td className="border border-slate-200 p-2 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => setSourceKey(resp.code)}
+                            className="inline-flex items-center gap-1.5 text-left hover:text-indigo-700"
+                            title={`Lihat matriks AHP ${resp.code}`}
+                          >
+                            <span className="font-mono font-semibold text-slate-800">
+                              {resp.code}
+                            </span>
+                            <span className="text-slate-700">{resp.name}</span>
+                            <Eye className="h-3 w-3 text-indigo-500" />
+                          </button>
+                        </td>
+                        {resp.ahp.weights.map((w, j) => (
+                          <td
+                            key={criteria[j].id}
+                            className="border border-slate-200 p-2 text-right font-mono text-slate-700"
+                          >
+                            {formatDecimal(w, 4)}
+                          </td>
+                        ))}
+                        <td className="border border-slate-200 p-2 text-right font-mono text-slate-600 bg-slate-50">
+                          {formatDecimal(rowSum, 4)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Baris Perhitungan 1: Total Kolom */}
+                  <tr className="bg-slate-100 font-semibold text-slate-800">
                     <td className="border border-slate-200 p-2">
-                      <p className="font-semibold text-slate-900">
-                        {resp.name}
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        {resp.role} · {resp.submittedAt}
-                      </p>
+                      TOTAL KOLOM (&Sigma;w<sub>k,j</sub>)
                     </td>
-                    {resp.ahp.weights.map((w, j) => (
+                    {aipStats.weightSums.map((sum, j) => (
                       <td
                         key={criteria[j].id}
-                        className="border border-slate-200 p-2 text-right font-mono text-slate-700"
+                        className="border border-slate-200 p-2 text-right font-mono"
                       >
-                        {formatDecimal(w, 4)}
+                        {formatDecimal(sum, 4)}
                       </td>
                     ))}
-                    <td className="border border-slate-200 p-2 text-center whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold border font-mono ${
-                          resp.ahp.isConsistent
-                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                            : "bg-amber-50 text-amber-800 border-amber-200"
-                        }`}
-                      >
-                        {formatDecimal(resp.ahp.cr, 4)} ·{" "}
-                        {resp.ahp.isConsistent
-                          ? "KONSISTEN"
-                          : "TIDAK KONSISTEN"}
-                      </span>
-                    </td>
-                    <td className="border border-slate-200 p-2 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => setSourceKey(resp.code)}
-                        className="inline-flex items-center gap-1 rounded border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100"
-                      >
-                        <Eye className="h-3 w-3" />
-                        <span>Detail</span>
-                      </button>
+                    <td className="border border-slate-200 p-2 text-right font-mono">
+                      {formatDecimal(
+                        aipStats.weightSums.reduce((a, b) => a + b, 0),
+                        4
+                      )}
                     </td>
                   </tr>
-                ))}
-                <tr className="bg-indigo-50 font-bold text-indigo-950">
-                  <td className="border border-slate-200 p-2.5 font-mono">
-                    AVG
-                  </td>
-                  <td className="border border-slate-200 p-2.5">
-                    Rata-rata Bobot AIP (n = {respondents.length})
-                  </td>
-                  {average.weights.map((w, j) => (
-                    <td
-                      key={criteria[j].id}
-                      className="border border-slate-200 p-2.5 text-right font-mono text-indigo-800"
-                    >
-                      {formatDecimal(w, 4)}
+
+                  {/* Baris Perhitungan 2: Rata-rata Aritmetika (Total / n) */}
+                  <tr className="bg-slate-50 font-semibold text-slate-800">
+                    <td className="border border-slate-200 p-2">
+                      RATA-RATA (&Sigma;w<sub>k,j</sub> / {respondents.length})
                     </td>
-                  ))}
-                  <td className="border border-slate-200 p-2.5 text-center whitespace-nowrap">
+                    {aipStats.rawMeans.map((m, j) => (
+                      <td
+                        key={criteria[j].id}
+                        className="border border-slate-200 p-2 text-right font-mono"
+                      >
+                        {formatDecimal(m, 4)}
+                      </td>
+                    ))}
+                    <td className="border border-slate-200 p-2 text-right font-mono">
+                      {formatDecimal(aipStats.rawMeanTotal, 4)}
+                    </td>
+                  </tr>
+
+                  {/* Baris Perhitungan 3: Bobot Akhir Ternormalisasi */}
+                  <tr className="bg-indigo-50 font-bold text-indigo-950">
+                    <td className="border border-slate-200 p-2.5">
+                      BOBOT AKHIR AIP (Normalisasi)
+                    </td>
+                    {average.weights.map((w, j) => (
+                      <td
+                        key={criteria[j].id}
+                        className="border border-slate-200 p-2.5 text-right font-mono text-indigo-800"
+                      >
+                        {formatDecimal(w, 4)}{" "}
+                        <span className="text-[10px] font-normal text-indigo-600">
+                          ({formatPercent(w)})
+                        </span>
+                      </td>
+                    ))}
+                    <td className="border border-slate-200 p-2.5 text-right font-mono text-indigo-800">
+                      1,0000 (100%)
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Tahap 2 AIP: Perhitungan Rata-rata Consistency Ratio (CR) */}
+          <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  3. Perhitungan Rata-rata Consistency Ratio (CR) Metode AIP
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Nilai &lambda;maks, CI, dan CR masing-masing responden
+                  dirata-ratakan untuk mengukur konsistensi rata-rata responden
+                  pada metode AIP.
+                </p>
+              </div>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold border self-start sm:self-center ${
+                  average.isConsistent
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                    : "bg-amber-50 text-amber-800 border-amber-200"
+                }`}
+              >
+                {average.isConsistent ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4" />
+                )}
+                <span>
+                  CR = {formatDecimal(average.cr, 4)} ·{" "}
+                  {average.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
+                </span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              <div className="lg:col-span-8 overflow-x-auto">
+                <table className="w-full text-xs border border-slate-200 border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-700 font-semibold">
+                      <th className="border border-slate-200 p-2 text-left">
+                        Responden
+                      </th>
+                      <th className="border border-slate-200 p-2 text-right">
+                        &lambda;maks
+                      </th>
+                      <th className="border border-slate-200 p-2 text-right">
+                        CI = (&lambda;maks&minus;n)/(n&minus;1)
+                      </th>
+                      <th className="border border-slate-200 p-2 text-right">
+                        RI (n={criteria.length})
+                      </th>
+                      <th className="border border-slate-200 p-2 text-right">
+                        CR = CI / RI
+                      </th>
+                      <th className="border border-slate-200 p-2 text-center">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {respondents.map((resp) => (
+                      <tr key={resp.id} className="hover:bg-slate-50">
+                        <td className="border border-slate-200 p-2 whitespace-nowrap">
+                          <span className="font-mono font-semibold text-slate-800 mr-1.5">
+                            {resp.code}
+                          </span>
+                          <span className="text-slate-700">{resp.name}</span>
+                        </td>
+                        <td className="border border-slate-200 p-2 text-right font-mono">
+                          {formatDecimal(resp.ahp.lambdaMax, 4)}
+                        </td>
+                        <td className="border border-slate-200 p-2 text-right font-mono">
+                          {formatDecimal(resp.ahp.ci, 4)}
+                        </td>
+                        <td className="border border-slate-200 p-2 text-right font-mono">
+                          {formatDecimal(resp.ahp.ri, 2)}
+                        </td>
+                        <td className="border border-slate-200 p-2 text-right font-mono font-semibold text-slate-900">
+                          {formatDecimal(resp.ahp.cr, 4)}
+                        </td>
+                        <td className="border border-slate-200 p-2 text-center whitespace-nowrap">
+                          <span
+                            className={`inline-flex rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                              resp.ahp.isConsistent
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                : "bg-amber-50 text-amber-800 border-amber-200"
+                            }`}
+                          >
+                            {resp.ahp.isConsistent
+                              ? "KONSISTEN"
+                              : "TIDAK KONSISTEN"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-indigo-50 font-bold text-indigo-950">
+                      <td className="border border-slate-200 p-2">
+                        RATA-RATA AIP (n = {respondents.length})
+                      </td>
+                      <td className="border border-slate-200 p-2 text-right font-mono">
+                        {formatDecimal(aipStats.avgLambdaMax, 4)}
+                      </td>
+                      <td className="border border-slate-200 p-2 text-right font-mono">
+                        {formatDecimal(aipStats.avgCi, 4)}
+                      </td>
+                      <td className="border border-slate-200 p-2 text-right font-mono">
+                        1.24
+                      </td>
+                      <td className="border border-slate-200 p-2 text-right font-mono text-indigo-800">
+                        {formatDecimal(average.cr, 4)}
+                      </td>
+                      <td className="border border-slate-200 p-2 text-center">
+                        <span
+                          className={`inline-flex rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                            average.isConsistent
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              : "bg-amber-50 text-amber-800 border-amber-200"
+                          }`}
+                        >
+                          {average.isConsistent
+                            ? "KONSISTEN"
+                            : "TIDAK KONSISTEN"}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="lg:col-span-4 space-y-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Jumlah Responden (n)</span>
+                    <span className="font-mono font-semibold">
+                      {respondents.length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">
+                      Lolos CR &le; 0,10
+                    </span>
+                    <span className="font-mono font-semibold">
+                      {average.consistentCount} / {respondents.length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">
+                      Total CR (&Sigma; CR<sub>k</sub>)
+                    </span>
+                    <span className="font-mono font-semibold">
+                      {formatDecimal(aipStats.crSum, 4)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Rata-rata &lambda;maks</span>
+                    <span className="font-mono font-semibold">
+                      {formatDecimal(aipStats.avgLambdaMax, 4)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Rata-rata CI</span>
+                    <span className="font-mono font-semibold">
+                      {formatDecimal(aipStats.avgCi, 4)}
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
+                    <span className="font-semibold text-slate-900">
+                      CR AIP = &Sigma;CR / {respondents.length}
+                    </span>
                     <span
-                      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold border font-mono ${
+                      className={`font-mono text-base font-bold ${
                         average.isConsistent
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                          : "bg-amber-50 text-amber-800 border-amber-200"
+                          ? "text-emerald-700"
+                          : "text-amber-700"
                       }`}
                     >
-                      {formatDecimal(average.cr, 4)} ·{" "}
-                      {average.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
+                      {formatDecimal(average.cr, 4)}
                     </span>
-                  </td>
-                  <td className="border border-slate-200 p-2.5 text-right text-[11px] font-semibold text-indigo-700">
-                    Aktif di SAW
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600 space-y-1.5">
+                  <p className="font-semibold text-slate-800">
+                    Catatan Metode AIP vs AIJ:
+                  </p>
+                  <p>
+                    AIP merata-ratakan vektor bobot tiap responden tanpa
+                    membentuk matriks 6&times;6 baru. Untuk melihat matriks
+                    konsensus 6&times;6 yang digabung per sel, pilih tab{" "}
+                    <button
+                      type="button"
+                      onClick={() => setSourceKey("geomean")}
+                      className="font-semibold text-indigo-600 hover:underline"
+                    >
+                      Geometric Mean (AIJ)
+                    </button>
+                    .
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </>
       )}
 
-      {/* OPSI 2: DETAIL PER RESPONDEN */}
+      {/* OPSI 2: GEOMETRIC MEAN (AIJ) */}
+      {activeSource.mode === "geomean" && (
+        <>
+          <section className="rounded-xl bg-emerald-50/70 border border-emerald-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase text-emerald-800">
+                Geometric Mean (AIJ) · CR ={" "}
+                {formatDecimal(average.groupGeometricAhp.cr, 4)} ·{" "}
+                {average.groupGeometricAhp.isConsistent
+                  ? "KONSISTEN"
+                  : "TIDAK KONSISTEN"}
+              </p>
+              <p className="text-sm font-bold text-slate-900">
+                Matriks Gabungan {respondents.length} Responden
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSourceKey("average")}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Kembali ke Rata-rata AIP</span>
+              </button>
+              <Link
+                href="/geometric-mean"
+                className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+              >
+                <GitMerge className="h-3.5 w-3.5" />
+                <span>Bandingkan AIJ vs AIP</span>
+              </Link>
+            </div>
+          </section>
+
+          <AhpCalculationView
+            title={`Matriks Gabungan Geometric Mean (${respondents.length} Responden · AIJ)`}
+            subtitle="Agregasi geometrik per sel dari seluruh responden, normalisasi bobot, dan uji konsistensi CR."
+            criteria={criteria}
+            ahp={average.groupGeometricAhp}
+            editable={false}
+          />
+        </>
+      )}
+
+      {/* OPSI 3: DETAIL PER RESPONDEN */}
       {activeSource.mode === "respondent" && activeRespondent && (
         <>
           <section className="rounded-xl bg-indigo-50/70 border border-indigo-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

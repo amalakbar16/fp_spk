@@ -511,6 +511,8 @@ export function SawClient() {
                     className={
                       item.mode === "average"
                         ? "bg-indigo-50/70 font-semibold"
+                        : item.mode === "geomean"
+                        ? "bg-emerald-50/60 font-semibold"
                         : isActive
                         ? "bg-amber-50/50"
                         : "hover:bg-slate-50"

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, User, Users } from "lucide-react";
+import { AlertTriangle, CheckCircle2, GitMerge, User, Users } from "lucide-react";
 import { formatDecimal } from "@/lib/format";
 import type {
   AhpAverageResult,
@@ -24,6 +24,7 @@ export function WeightSourceBar({
   activeSource,
 }: WeightSourceBarProps) {
   const isAverage = activeSource.mode === "average";
+  const isGeoMean = activeSource.mode === "geomean";
   const isRespondent = activeSource.mode === "respondent";
 
   const selectedRespondentCode = isRespondent
@@ -35,7 +36,7 @@ export function WeightSourceBar({
 
   return (
     <section className="sticky top-2 sm:top-3 z-30 rounded-xl bg-white/95 backdrop-blur-sm border border-slate-200 px-3.5 py-2.5 shadow-sm">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wide text-slate-500 mr-1">
             Sumber Bobot:
@@ -52,6 +53,19 @@ export function WeightSourceBar({
           >
             <Users className="h-3.5 w-3.5" />
             <span>Rata-rata {respondents.length} Resp. (AIP)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onChangeSource("geomean")}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors cursor-pointer ${
+              isGeoMean
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            <GitMerge className="h-3.5 w-3.5" />
+            <span>Geometric Mean (AIJ)</span>
           </button>
 
           <div
@@ -85,7 +99,7 @@ export function WeightSourceBar({
         </div>
 
         <span
-          className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold border self-start lg:self-auto ${
+          className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold border self-start xl:self-auto ${
             activeConsistent
               ? "bg-emerald-50 text-emerald-800 border-emerald-200"
               : "bg-amber-50 text-amber-800 border-amber-200"

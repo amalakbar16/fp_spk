@@ -179,7 +179,32 @@ export function buildMatrixFromUpperPairs(
 }
 
 /**
- * Menghitung rata-rata bobot prioritas AHP per kriteria dari seluruh responden (metode AIP / Tabel 2 paper acuan).
+ * Menghitung matriks agregasi kelompok menggunakan Geometric Mean (AIJ).
+ */
+export function computeGeometricMeanMatrix(matrices: number[][][]): number[][] {
+  if (matrices.length === 0) {
+    throw new Error("Daftar matriks tidak boleh kosong.");
+  }
+  const n = matrices[0].length;
+  return Array.from({ length: n }, (_, i) =>
+    Array.from({ length: n }, (_, j) => {
+      if (i === j) return 1;
+      let logSum = 0;
+      for (const m of matrices) {
+        const val = m[i][j];
+        if (!Number.isFinite(val) || val <= 0) {
+          throw new Error("Semua nilai matriks harus lebih besar dari 0.");
+        }
+        logSum += Math.log(val);
+      }
+      return Math.exp(logSum / matrices.length);
+    })
+  );
+}
+
+/**
+ * Menghitung rata-rata bobot prioritas AHP per kriteria (AIP / Tabel 2 paper acuan)
+ * sekaligus menyediakan agregasi matriks Geometric Mean (AIJ).
  */
 export function computeAhpAverageResult(
   criteria: Criterion[],
@@ -196,6 +221,7 @@ export function computeAhpAverageResult(
       cr: 0,
       isConsistent: true,
       weights: fallback.weights,
+      groupGeometricAhp: fallback,
     };
   }
 
@@ -216,11 +242,17 @@ export function computeAhpAverageResult(
       ? meanWeights.map((w) => w / weightSum)
       : criteria.map(() => 1 / criteria.length);
 
+  const geoMatrix = computeGeometricMeanMatrix(
+    individualAhpResults.map((item) => item.pairwiseMatrix)
+  );
+  const groupGeometricAhp = computeAhp(criteria, geoMatrix);
+
   return {
     respondentCount: count,
     consistentCount,
     cr,
     isConsistent,
     weights,
+    groupGeometricAhp,
   };
 }

@@ -4,6 +4,7 @@ import {
   BarChart3,
   Calculator,
   Database,
+  GitMerge,
   LayoutDashboard,
   Scale,
   Smartphone,
@@ -16,6 +17,7 @@ import type { ReactNode } from "react";
 const NAV_ITEMS = [
   { href: "/", label: "Beranda", icon: LayoutDashboard },
   { href: "/ahp", label: "Kriteria & AHP", icon: Scale },
+  { href: "/geometric-mean", label: "Geometric Mean", icon: GitMerge },
   { href: "/responden", label: "Data Responden", icon: Users },
   { href: "/alternatif", label: "Data Alternatif", icon: Smartphone },
   { href: "/saw", label: "Perhitungan SAW", icon: Calculator },
