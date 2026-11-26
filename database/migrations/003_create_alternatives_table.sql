@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS `alternatives` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `code` VARCHAR(10) NOT NULL,
+  `name` VARCHAR(150) NOT NULL,
+  `price` DOUBLE NOT NULL,
+  `processor_score` DOUBLE NOT NULL,
+  `ram_gb` DOUBLE NOT NULL,
+  `storage_gb` DOUBLE NOT NULL,
+  `battery_mah` DOUBLE NOT NULL,
+  `camera_score` DOUBLE NOT NULL,
+  `cam_main_mp` DOUBLE NULL,
+  `cam_uw_mp` DOUBLE NULL,
+  `cam_tele_mp` DOUBLE NULL,
+  `cam_front_mp` DOUBLE NULL,
+  `cam_lens` VARCHAR(50) NULL,
+  `cam_ois` VARCHAR(30) NULL,
+  `cam_video` VARCHAR(30) NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_alternatives_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
