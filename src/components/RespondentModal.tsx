@@ -181,8 +181,10 @@ export function RespondentModal({
                     <AlertTriangle className="h-3.5 w-3.5" />
                   )}
                   <span>
-                    CR = {formatDecimal(livePreview.cr, 4)} (
-                    {livePreview.isConsistent ? "KONSISTEN" : "CR > 0,10"})
+                    CR = {formatDecimal(livePreview.cr, 4)} ·{" "}
+                    {livePreview.isConsistent
+                      ? "KONSISTEN"
+                      : "TIDAK KONSISTEN"}
                   </span>
                 </span>
               </div>

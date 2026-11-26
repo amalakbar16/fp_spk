@@ -303,7 +303,7 @@ export function AhpCalculationView({
                     ahp.isConsistent ? "text-emerald-700" : "text-rose-700"
                   }`}
                 >
-                  {formatDecimal(ahp.cr, 6)}
+                  {formatDecimal(ahp.cr, 4)}
                 </span>
               </div>
             </div>

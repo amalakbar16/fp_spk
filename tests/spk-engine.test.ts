@@ -167,7 +167,7 @@ test("Analisis sensitivitas menjaga total bobot = 1 dan mendeteksi perubahan per
   assert.equal(res.newWinnerCode, "A10");
 });
 
-test("Agregasi 10 responden kuesioner (tanpa Zakky) menghasilkan rata-rata AIP persis paper & GeoMean CR konsisten", () => {
+test("Agregasi 10 responden kuesioner (tanpa Zakky) menghasilkan rata-rata AIP persis paper", () => {
   assert.equal(SEED_AHP_RESPONDENTS.length, 10);
   assert.ok(
     SEED_AHP_RESPONDENTS.every((r) => r.name.toLowerCase() !== "zakky"),
@@ -181,6 +181,9 @@ test("Agregasi 10 responden kuesioner (tanpa Zakky) menghasilkan rata-rata AIP p
 
   const avg = computeAhpAverageResult(criteria, individualResults);
   assert.equal(avg.respondentCount, 10);
+  assert.equal(avg.consistentCount, 1);
+  assertClose(avg.cr, 0.33651189, 1e-7);
+  assert.equal(avg.isConsistent, false);
   assertClose(
     avg.weights.reduce((a, b) => a + b, 0),
     1,
@@ -196,9 +199,6 @@ test("Agregasi 10 responden kuesioner (tanpa Zakky) menghasilkan rata-rata AIP p
     0.16517415, // Kamera
   ];
   avg.weights.forEach((w, idx) => assertClose(w, expectedAipWeights[idx], 1e-7));
-
-  assert.equal(avg.groupGeometricAhp.isConsistent, true);
-  assertClose(avg.groupGeometricAhp.cr, 0.06087807, 1e-7);
 });
 
 test("Audit R1 (Farrel Ega Nur Royyan) memakai rumus AHP Kelompok 12 (AVERAGE CV) secara akurat", () => {
@@ -243,30 +243,4 @@ test("Audit R1 (Farrel Ega Nur Royyan) memakai rumus AHP Kelompok 12 (AVERAGE CV
   assert.equal(farrelAhp.ri, 1.24);
   assertClose(farrelAhp.cr, 0.32143442, 1e-7);
   assert.equal(farrelAhp.isConsistent, false);
-});
-
-test("Bobot Geometric Mean (AIJ) 10 responden menghasilkan bobot konsisten dan total = 1", () => {
-  const criteria = buildCriteriaFixtures();
-  const individualResults = SEED_AHP_RESPONDENTS.map((resp) =>
-    computeAhp(criteria, buildMatrixFromUpperPairs(criteria, resp.upperPairs))
-  );
-  const avg = computeAhpAverageResult(criteria, individualResults);
-  const geo = avg.groupGeometricAhp;
-
-  const expectedGeoWeights = [
-    0.1961336, // Harga
-    0.28096761, // Prosesor
-    0.16477268, // RAM
-    0.17622815, // Penyimpanan
-    0.06726427, // Baterai
-    0.11463368, // Kamera
-  ];
-  geo.weights.forEach((w, idx) => assertClose(w, expectedGeoWeights[idx], 1e-7));
-  assertClose(
-    geo.weights.reduce((a, b) => a + b, 0),
-    1,
-    1e-12
-  );
-  assert.equal(geo.isConsistent, true);
-  assertClose(geo.cr, 0.06087807, 1e-7);
 });

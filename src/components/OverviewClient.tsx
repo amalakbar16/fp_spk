@@ -37,7 +37,11 @@ export function OverviewClient() {
           { cache: "no-store" }
         );
         const json = (await res.json()) as SpkPayload & { error?: string };
-        if (!res.ok) throw new Error((json as { error?: string }).error || "Gagal memuat data SPK.");
+        if (!res.ok) {
+          throw new Error(
+            (json as { error?: string }).error || "Gagal memuat data SPK."
+          );
+        }
         if (active) {
           setData(json);
           if (json.activeSource.key !== sourceKey) {
@@ -98,37 +102,20 @@ export function OverviewClient() {
   const altById = new Map(alternatives.map((a) => [a.id, a]));
   const costCount = criteria.filter((c) => c.attributeType === "cost").length;
   const benefitCount = criteria.length - costCount;
-  const displayedCr =
-    activeSource.mode === "average"
-      ? average.groupGeometricAhp.cr
-      : activeSource.cr ?? 0;
-  const displayedConsistent =
-    activeSource.mode === "average"
-      ? average.groupGeometricAhp.isConsistent
-      : Boolean(activeSource.isConsistent);
 
   return (
     <div className="space-y-6">
-      {/* Header Judul Studi Kasus */}
+      {/* Header */}
       <section className="rounded-xl bg-white border border-slate-200 p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-1.5">
-            <span className="inline-flex items-center rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 border border-indigo-200">
-              Final Project Sistem Pendukung Keputusan (MADM)
-            </span>
+          <div className="space-y-1">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Sistem Pendukung Keputusan Pemilihan Smartphone Bagi Mahasiswa
+              SPK Pemilihan Smartphone Bagi Mahasiswa
             </h1>
-            <p className="text-sm text-slate-600 max-w-3xl">
-              Menggunakan integrasi metode{" "}
-              <strong className="text-slate-800">
-                Analytical Hierarchy Process (AHP)
-              </strong>{" "}
-              untuk pembobotan kriteria dan uji konsistensi, serta{" "}
-              <strong className="text-slate-800">
-                Simple Additive Weighting (SAW)
-              </strong>{" "}
-              untuk pemeringkatan alternatif smartphone.
+            <p className="text-sm text-slate-600 max-w-2xl">
+              Pembobotan kriteria menggunakan <strong>AHP</strong> (rata-rata
+              bobot responden AIP) dan pemeringkatan alternatif menggunakan{" "}
+              <strong>SAW</strong>.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
@@ -136,45 +123,18 @@ export function OverviewClient() {
               href="/ahp"
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              <span>Atur Bobot AHP</span>
+              <span>Kriteria &amp; AHP</span>
             </Link>
             <Link
               href="/saw"
               className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
-              <span>Lihat Tahapan SAW</span>
+              <span>Perhitungan SAW</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
       </section>
-
-      {/* Peringatan jumlah data minimal 30 */}
-      {alternatives.length < 30 && (
-        <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-900">
-              <p className="font-semibold">
-                Jumlah Alternatif Saat Ini: {alternatives.length} dari Minimal
-                30 Data (Ketentuan UAS)
-              </p>
-              <p className="text-amber-800 mt-0.5">
-                Basis data awal diisi 20 data dari file Excel Kelompok 12. Anda
-                dapat menambahkan {30 - alternatives.length} data smartphone
-                tambahan melalui menu Data Alternatif sebelum pengumpulan.
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/alternatif"
-            className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 shrink-0 self-start sm:self-center"
-          >
-            <span>Tambah Alternatif</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      )}
 
       <WeightSourceBar
         sourceKey={sourceKey}
@@ -188,14 +148,14 @@ export function OverviewClient() {
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>TOTAL KRITERIA &amp; RESPONDEN</span>
+            <span>KRITERIA &amp; RESPONDEN</span>
             <Scale className="h-4 w-4 text-indigo-600" />
           </div>
           <p className="mt-2 text-2xl font-bold text-slate-900">
             {criteria.length} Kriteria · {respondents.length} Resp.
           </p>
           <p className="mt-1 text-xs text-slate-600">
-            {costCount} Cost · {benefitCount} Benefit (Data kuesioner aktif)
+            {costCount} Cost · {benefitCount} Benefit
           </p>
         </div>
 
@@ -208,40 +168,35 @@ export function OverviewClient() {
             {alternatives.length} Smartphone
           </p>
           <p className="mt-1 text-xs text-slate-600">
-            {alternatives.length >= 30
-              ? "Memenuhi ketentuan minimal 30"
-              : `Kurang ${30 - alternatives.length} dari syarat min. 30`}
+            <Link
+              href="/alternatif"
+              className="font-medium text-indigo-600 hover:underline"
+            >
+              Kelola data alternatif →
+            </Link>
           </p>
         </div>
 
         <div className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>
-              {activeSource.mode === "average"
-                ? "CR PENDUKUNG (GEOMEAN)"
-                : activeSource.mode === "geomean"
-                ? "CR GEOMETRIC MEAN (AIJ)"
-                : "CONSISTENCY RATIO (AHP)"}
-            </span>
-            {displayedConsistent ? (
+            <span>CONSISTENCY RATIO (AHP)</span>
+            {activeSource.isConsistent ? (
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             ) : (
               <AlertTriangle className="h-4 w-4 text-amber-600" />
             )}
           </div>
-          <p className="mt-2 text-2xl font-bold text-slate-900">
-            CR = {formatDecimal(displayedCr, 4)}
+          <p className="mt-2 text-2xl font-bold text-slate-900 font-mono">
+            CR = {formatDecimal(activeSource.cr ?? average.cr, 4)}
           </p>
           <p
-            className={`mt-1 text-xs font-medium ${
-              displayedConsistent ? "text-emerald-700" : "text-amber-700"
+            className={`mt-1 text-xs font-semibold ${
+              activeSource.isConsistent ? "text-emerald-700" : "text-amber-700"
             }`}
           >
-            {activeSource.mode === "average"
-              ? "AIP memakai GeoMean sebagai uji pendukung"
-              : displayedConsistent
+            {activeSource.isConsistent
               ? "KONSISTEN (CR ≤ 0,10)"
-              : "CR > 0,10 (Profil Individu)"}
+              : "TIDAK KONSISTEN (CR > 0,10)"}
           </p>
         </div>
 
@@ -254,7 +209,7 @@ export function OverviewClient() {
             {topAlt ? `${topAlt.code} · ${topAlt.name}` : "-"}
           </p>
           <p className="mt-1 text-xs text-slate-600">
-            Nilai Preferensi (Vi):{" "}
+            Nilai Vi:{" "}
             <strong className="text-indigo-700">
               {topAlt ? formatDecimal(topAlt.vi, 4) : "-"}
             </strong>
@@ -268,11 +223,9 @@ export function OverviewClient() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-slate-900">
-                Bobot Prioritas Kriteria (AHP)
+                Bobot Prioritas Kriteria
               </h2>
-              <p className="text-xs text-slate-500">
-                Sumber aktif: {activeSource.label}
-              </p>
+              <p className="text-xs text-slate-500">{activeSource.label}</p>
             </div>
             <Link
               href="/ahp"
@@ -324,10 +277,10 @@ export function OverviewClient() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-slate-900">
-                5 Besar Rekomendasi Smartphone (SAW)
+                5 Besar Rekomendasi Smartphone
               </h2>
               <p className="text-xs text-slate-500">
-                Peringkat teratas berdasarkan nilai preferensi Vi tertinggi
+                Peringkat teratas berdasarkan nilai preferensi Vi
               </p>
             </div>
             <Link
@@ -382,7 +335,9 @@ export function OverviewClient() {
                           : "-"}
                       </td>
                       <td className="py-2.5 pr-3 text-right text-slate-700">
-                        {alt ? formatCriterionRawValue("C6", alt.cameraScore) : "-"}
+                        {alt
+                          ? formatCriterionRawValue("C6", alt.cameraScore)
+                          : "-"}
                       </td>
                       <td className="py-2.5 text-right font-mono font-semibold text-indigo-700">
                         {formatDecimal(row.vi, 4)}

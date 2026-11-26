@@ -47,3 +47,5 @@ Folder `tickets/` digunakan untuk mendokumentasikan **setiap rencana, setup awal
 | `011` | Audit & Verifikasi Selisih Rumus AHP Responden (Farrel) Antara Web dan Excel | `DONE` | [011-cek-selisih-rumus-ahp-responden-vs-excel.md](./011-cek-selisih-rumus-ahp-responden-vs-excel.md) |
 | `012` | Konsistensi Tipe Cursor (Pointer / Not-Allowed) pada Elemen Interaktif | `DONE` | [012-konsistensi-cursor-pointer-interaktif.md](./012-konsistensi-cursor-pointer-interaktif.md) |
 | `013` | Menu Khusus Geometric Mean (AIJ) & Perbandingan Terhadap Rata-rata Bobot AIP | `DONE` | [013-menu-geometric-mean-dan-perbandingan-aip.md](./013-menu-geometric-mean-dan-perbandingan-aip.md) |
+| `014` | Penghapusan Geometric Mean (AIP Murni) & Penyederhanaan Teks UI Redundan | `DONE` | [014-hapus-geomean-dan-ringkas-ui.md](./014-hapus-geomean-dan-ringkas-ui.md) |
+| `015` | Penyeragaman Tampilan CR (4 Desimal + Status Konsisten) & Penghapusan Keterangan Target 30 | `DONE` | [015-seragamkan-tampilan-cr-dan-hapus-target-30.md](./015-seragamkan-tampilan-cr-dan-hapus-target-30.md) |

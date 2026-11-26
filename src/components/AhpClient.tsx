@@ -1,25 +1,10 @@
 "use client";
 
-import {
-  AlertTriangle,
-  ArrowLeft,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Edit3,
-  Eye,
-  GitMerge,
-  Users,
-  X,
-} from "lucide-react";
+import { ArrowLeft, Edit3, Eye, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDecimal, formatPercent } from "@/lib/format";
-import type {
-  AttributeType,
-  Criterion,
-  SpkPayload,
-} from "@/lib/types";
+import type { AttributeType, Criterion, SpkPayload } from "@/lib/types";
 import { useWeightSource } from "@/lib/use-weight-source";
 import { AhpCalculationView } from "./AhpCalculationView";
 import { WeightSourceBar } from "./WeightSourceBar";
@@ -34,7 +19,6 @@ export function AhpClient() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [editingCrit, setEditingCrit] = useState<Criterion | null>(null);
-  const [showGeoDetail, setShowGeoDetail] = useState(false);
 
   const applyPayload = useCallback(
     (json: SpkPayload, targetSource: string) => {
@@ -154,34 +138,22 @@ export function AhpClient() {
       <section className="rounded-xl bg-white border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900">
-            Kriteria &amp; Transparansi Perhitungan AHP
+            Kriteria &amp; Pembobotan AHP
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Kelola definisi kriteria dan telusuri seluruh tahapan pembobotan AHP
-            dari <strong>Rata-rata {respondents.length} Responden (AIP)</strong>,{" "}
-            <strong>Geometric Mean (AIJ)</strong>, maupun rincian{" "}
-            <strong>Per Responden</strong> secara transparan.
+            Daftar kriteria penilaian, rekap bobot rata-rata responden (AIP),
+            dan rincian matriks perbandingan tiap responden.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 shrink-0 self-start md:self-center">
-          <Link
-            href="/geometric-mean"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            <GitMerge className="h-4 w-4 text-indigo-600" />
-            <span>Bandingkan GeoMean vs AIP</span>
-          </Link>
-          <Link
-            href="/responden"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs sm:text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
-          >
-            <Users className="h-4 w-4" />
-            <span>Kelola Data Responden</span>
-          </Link>
-        </div>
+        <Link
+          href="/responden"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs sm:text-sm font-semibold text-indigo-700 hover:bg-indigo-100 shrink-0 self-start md:self-center"
+        >
+          <Users className="h-4 w-4" />
+          <span>Kelola Data Responden</span>
+        </Link>
       </section>
 
-      {/* Pemilih Sumber Bobot Terintegrasi */}
       <WeightSourceBar
         sourceKey={sourceKey}
         onChangeSource={(next) => {
@@ -209,11 +181,11 @@ export function AhpClient() {
       <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-4">
         <div>
           <h2 className="text-base font-bold text-slate-900">
-            1. Daftar Kriteria, Atribut, dan Bobot Prioritas Aktif
+            1. Daftar Kriteria &amp; Bobot Aktif
           </h2>
           <p className="text-xs text-slate-500">
-            Menampilkan definisi atribut (Benefit/Cost), satuan, skala
-            penilaian, dan bobot aktif dari <strong>{activeSource.label}</strong>.
+            Bobot aktif saat ini berasal dari{" "}
+            <strong>{activeSource.label}</strong>.
           </p>
         </div>
 
@@ -225,9 +197,9 @@ export function AhpClient() {
                 <th className="py-2.5 px-3">Kriteria</th>
                 <th className="py-2.5 px-3">Kategori</th>
                 <th className="py-2.5 px-3">Satuan</th>
-                <th className="py-2.5 px-3">Bobot Aktif</th>
+                <th className="py-2.5 px-3">Bobot</th>
                 <th className="py-2.5 px-3">Persentase</th>
-                <th className="py-2.5 px-3">Definisi &amp; Skala Penilaian</th>
+                <th className="py-2.5 px-3">Keterangan Skala</th>
                 <th className="py-2.5 px-3 text-right">Aksi</th>
               </tr>
             </thead>
@@ -280,257 +252,145 @@ export function AhpClient() {
         </div>
       </section>
 
-      {/* OPSI 1: RATA-RATA RESPONDEN (PAPER ACUAN) */}
+      {/* OPSI 1: REKAP RATA-RATA BOBOT RESPONDEN (AIP) */}
       {activeSource.mode === "average" && (
-        <>
-          <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  2. Rekapitulasi Bobot AHP Seluruh Responden &amp; Rata-rata
-                  Per Kriteria (Paper Acuan)
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Mengikuti Tabel 1 &amp; Tabel 2 Zulfahmi et al. (2026): setiap
-                  responden dihitung bobot prioritas AHP-nya, lalu dirata-ratakan
-                  per kriteria ({"\u0077\u0304"}
-                  <sub>j</sub> = &Sigma;w<sub>k,j</sub> / {respondents.length}).
-                </p>
-              </div>
-              <Link
-                href="/responden"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700 shrink-0 self-start sm:self-center"
-              >
-                <Users className="h-3.5 w-3.5" />
-                <span>Tambah / Edit di Data Responden</span>
-              </Link>
+        <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">
+                2. Rekap Bobot AHP Responden &amp; Rata-rata AIP (n ={" "}
+                {respondents.length})
+              </h2>
+              <p className="text-xs text-slate-500">
+                Bobot prioritas masing-masing responden dirata-ratakan per
+                kriteria (Tabel 2 paper acuan).
+              </p>
             </div>
+            <Link
+              href="/responden"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700 shrink-0 self-start sm:self-center"
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span>Edit di Data Responden</span>
+            </Link>
+          </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border border-slate-200 border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-700 font-semibold">
-                    <th className="border border-slate-200 p-2 text-left">
-                      Kode
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border border-slate-200 border-collapse">
+              <thead>
+                <tr className="bg-slate-50 text-slate-700 font-semibold">
+                  <th className="border border-slate-200 p-2 text-left">Kode</th>
+                  <th className="border border-slate-200 p-2 text-left">
+                    Responden
+                  </th>
+                  {criteria.map((c) => (
+                    <th
+                      key={c.id}
+                      className="border border-slate-200 p-2 text-right whitespace-nowrap"
+                    >
+                      {c.code} · {c.name}
                     </th>
-                    <th className="border border-slate-200 p-2 text-left">
-                      Nama Responden
-                    </th>
-                    {criteria.map((c) => (
-                      <th
-                        key={c.id}
-                        className="border border-slate-200 p-2 text-right whitespace-nowrap"
-                      >
-                        {c.code} · {c.name}
-                      </th>
-                    ))}
-                    <th className="border border-slate-200 p-2 text-center">
-                      CR Individu
-                    </th>
-                    <th className="border border-slate-200 p-2 text-right">
-                      Telusuri AHP
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {respondents.map((resp) => (
-                    <tr key={resp.id} className="hover:bg-slate-50">
-                      <td className="border border-slate-200 p-2 font-mono font-semibold text-slate-800">
-                        {resp.code}
-                      </td>
-                      <td className="border border-slate-200 p-2">
-                        <p className="font-semibold text-slate-900">
-                          {resp.name}
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          {resp.role} · {resp.submittedAt}
-                        </p>
-                      </td>
-                      {resp.ahp.weights.map((w, j) => (
-                        <td
-                          key={criteria[j].id}
-                          className="border border-slate-200 p-2 text-right font-mono text-slate-700"
-                        >
-                          {formatDecimal(w, 4)}
-                        </td>
-                      ))}
-                      <td className="border border-slate-200 p-2 text-center">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold border ${
-                            resp.ahp.isConsistent
-                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                              : "bg-amber-50 text-amber-800 border-amber-200"
-                          }`}
-                        >
-                          {formatDecimal(resp.ahp.cr, 4)}
-                        </span>
-                      </td>
-                      <td className="border border-slate-200 p-2 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => setSourceKey(resp.code)}
-                          className="inline-flex items-center gap-1 rounded border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100"
-                          title="Lihat matriks dan seluruh tahapan AHP responden ini"
-                        >
-                          <Eye className="h-3 w-3" />
-                          <span>Detail Matriks</span>
-                        </button>
-                      </td>
-                    </tr>
                   ))}
-                  {/* Baris Rata-rata Bobot (Tabel 2 Paper Acuan) */}
-                  <tr className="bg-indigo-50 font-bold text-indigo-950">
-                    <td className="border border-slate-200 p-2.5 font-mono">
-                      AVG
+                  <th className="border border-slate-200 p-2 text-center">
+                    CR Individu
+                  </th>
+                  <th className="border border-slate-200 p-2 text-right">
+                    Rincian
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {respondents.map((resp) => (
+                  <tr key={resp.id} className="hover:bg-slate-50">
+                    <td className="border border-slate-200 p-2 font-mono font-semibold text-slate-800">
+                      {resp.code}
                     </td>
-                    <td className="border border-slate-200 p-2.5">
-                      Rata-rata Bobot Prioritas (n = {respondents.length})
+                    <td className="border border-slate-200 p-2">
+                      <p className="font-semibold text-slate-900">
+                        {resp.name}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {resp.role} · {resp.submittedAt}
+                      </p>
                     </td>
-                    {average.weights.map((w, j) => (
+                    {resp.ahp.weights.map((w, j) => (
                       <td
                         key={criteria[j].id}
-                        className="border border-slate-200 p-2.5 text-right font-mono text-indigo-800"
+                        className="border border-slate-200 p-2 text-right font-mono text-slate-700"
                       >
                         {formatDecimal(w, 4)}
                       </td>
                     ))}
-                    <td className="border border-slate-200 p-2.5 text-center font-mono text-[11px] text-indigo-700">
-                      Total = 1,0000
+                    <td className="border border-slate-200 p-2 text-center whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold border font-mono ${
+                          resp.ahp.isConsistent
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "bg-amber-50 text-amber-800 border-amber-200"
+                        }`}
+                      >
+                        {formatDecimal(resp.ahp.cr, 4)} ·{" "}
+                        {resp.ahp.isConsistent
+                          ? "KONSISTEN"
+                          : "TIDAK KONSISTEN"}
+                      </span>
                     </td>
-                    <td className="border border-slate-200 p-2.5 text-right text-[11px] font-semibold text-indigo-700">
-                      Aktif di SAW
+                    <td className="border border-slate-200 p-2 text-right whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => setSourceKey(resp.code)}
+                        className="inline-flex items-center gap-1 rounded border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100"
+                      >
+                        <Eye className="h-3 w-3" />
+                        <span>Detail</span>
+                      </button>
                     </td>
                   </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {/* Verifikasi Konsistensi Kelompok Pendukung (Geometric Mean) */}
-          <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  3. Verifikasi Konsistensi Kelompok (Pendukung)
-                </h2>
-                <p className="text-xs text-slate-600">
-                  Karena metode rata-rata bobot per kriteria (Tabel 2 paper
-                  acuan) tidak membentuk satu matriks tunggal, tabel ini
-                  memverifikasi konsistensi kumpulan {respondents.length}{" "}
-                  responden lewat agregasi matriks <i>Geometric Mean</i>.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold border ${
-                    average.groupGeometricAhp.isConsistent
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : "bg-rose-50 text-rose-800 border-rose-200"
-                  }`}
-                >
-                  {average.groupGeometricAhp.isConsistent ? (
-                    <CheckCircle2 className="h-4 w-4" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4" />
-                  )}
-                  <span>
-                    CR Kelompok ={" "}
-                    {formatDecimal(average.groupGeometricAhp.cr, 4)} (
-                    {average.groupGeometricAhp.isConsistent
-                      ? "KONSISTEN ≤ 0,10"
-                      : "TIDAK KONSISTEN"}
-                    )
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowGeoDetail((v) => !v)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  {showGeoDetail ? (
-                    <>
-                      <ChevronUp className="h-3.5 w-3.5" />
-                      <span>Tutup Matriks</span>
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-3.5 w-3.5" />
-                      <span>Lihat Matriks</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {showGeoDetail && (
-              <div className="pt-2 space-y-6">
-                <AhpCalculationView
-                  title="Matriks Gabungan Geometric Mean Seluruh Responden"
-                  subtitle="Dihitung hanya sebagai verifikasi konsistensi kelompok (bobot utama tetap memakai rata-rata per kriteria pada Bagian 2)."
-                  criteria={criteria}
-                  ahp={average.groupGeometricAhp}
-                  editable={false}
-                  sectionOffset={4}
-                />
-              </div>
-            )}
-          </section>
-        </>
+                ))}
+                <tr className="bg-indigo-50 font-bold text-indigo-950">
+                  <td className="border border-slate-200 p-2.5 font-mono">
+                    AVG
+                  </td>
+                  <td className="border border-slate-200 p-2.5">
+                    Rata-rata Bobot AIP (n = {respondents.length})
+                  </td>
+                  {average.weights.map((w, j) => (
+                    <td
+                      key={criteria[j].id}
+                      className="border border-slate-200 p-2.5 text-right font-mono text-indigo-800"
+                    >
+                      {formatDecimal(w, 4)}
+                    </td>
+                  ))}
+                  <td className="border border-slate-200 p-2.5 text-center whitespace-nowrap">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold border font-mono ${
+                        average.isConsistent
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          : "bg-amber-50 text-amber-800 border-amber-200"
+                      }`}
+                    >
+                      {formatDecimal(average.cr, 4)} ·{" "}
+                      {average.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
+                    </span>
+                  </td>
+                  <td className="border border-slate-200 p-2.5 text-right text-[11px] font-semibold text-indigo-700">
+                    Aktif di SAW
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
-      {/* OPSI 2: GEOMETRIC MEAN (AIJ) */}
-      {activeSource.mode === "geomean" && (
-        <>
-          <section className="rounded-xl bg-emerald-50/70 border border-emerald-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase text-emerald-800">
-                Mode Agregasi Kelompok Geometric Mean (AIJ)
-              </p>
-              <p className="text-sm font-bold text-slate-900">
-                Matriks Gabungan {respondents.length} Responden · CR ={" "}
-                {formatDecimal(average.groupGeometricAhp.cr, 4)} (
-                {average.groupGeometricAhp.isConsistent
-                  ? "KONSISTEN ≤ 0,10"
-                  : "TIDAK KONSISTEN"}
-                )
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setSourceKey("average")}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Kembali ke Rata-rata AIP</span>
-              </button>
-              <Link
-                href="/geometric-mean"
-                className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
-              >
-                <GitMerge className="h-3.5 w-3.5" />
-                <span>Buka Perbandingan AIJ vs AIP</span>
-              </Link>
-            </div>
-          </section>
-
-          <AhpCalculationView
-            title={`Matriks Gabungan Geometric Mean (${respondents.length} Responden · AIJ)`}
-            subtitle="Setiap sel dibentuk dari rata-rata geometrik responden, lalu dihitung bobot prioritas dan uji konsistensi CR secara langsung pada satu matriks tunggal."
-            criteria={criteria}
-            ahp={average.groupGeometricAhp}
-            editable={false}
-          />
-        </>
-      )}
-
-      {/* OPSI 3: PENELUSURAN DETAIL PER RESPONDEN */}
+      {/* OPSI 2: DETAIL PER RESPONDEN */}
       {activeSource.mode === "respondent" && activeRespondent && (
         <>
           <section className="rounded-xl bg-indigo-50/70 border border-indigo-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase text-indigo-700">
-                Audit Perhitungan AHP Responden
+                Responden Aktif
               </p>
               <p className="text-sm font-bold text-slate-900">
                 {activeRespondent.code} · {activeRespondent.name}{" "}
@@ -546,7 +406,7 @@ export function AhpClient() {
                 className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Kembali ke Rekap Rata-rata</span>
+                <span>Kembali ke Rata-rata</span>
               </button>
               <Link
                 href="/responden"
@@ -559,8 +419,8 @@ export function AhpClient() {
           </section>
 
           <AhpCalculationView
-            title={`Matriks Perbandingan Berpasangan — ${activeRespondent.code} (${activeRespondent.name})`}
-            subtitle="Penelusuran transparan jawaban kuesioner asli responden, normalisasi kolom, bobot prioritas, hingga uji konsistensi CR. Untuk mengubah jawaban responden, gunakan menu Data Responden."
+            title={`Matriks Perbandingan — ${activeRespondent.code} (${activeRespondent.name})`}
+            subtitle="Rincian matriks perbandingan, normalisasi bobot, dan uji konsistensi CR responden."
             criteria={criteria}
             ahp={activeRespondent.ahp}
             editable={false}

@@ -787,54 +787,41 @@ export async function getFullSpkState(
   const normalizedKey = sourceKey.trim() || "average";
   let activeSource: SpkWeightSourceInfo;
 
-  if (normalizedKey.toLowerCase() === "geomean") {
+  const matchedRespondent =
+    normalizedKey.toLowerCase() === "average" ||
+    normalizedKey.toLowerCase() === "custom" ||
+    normalizedKey.toLowerCase() === "geomean"
+      ? undefined
+      : respondents.find(
+          (r) =>
+            r.code.toLowerCase() === normalizedKey.toLowerCase() ||
+            `r:${r.id}` === normalizedKey.toLowerCase()
+        );
+
+  if (matchedRespondent) {
     activeSource = {
-      key: "geomean",
-      mode: "geomean",
-      label: `Geometric Mean ${respondents.length} Responden (AIJ)`,
-      respondentId: null,
-      respondentCode: null,
-      weights: average.groupGeometricAhp.weights,
-      isConsistent: average.groupGeometricAhp.isConsistent,
-      cr: average.groupGeometricAhp.cr,
-      ahp: average.groupGeometricAhp,
+      key: matchedRespondent.code,
+      mode: "respondent",
+      label: `${matchedRespondent.code} · ${matchedRespondent.name}`,
+      respondentId: matchedRespondent.id,
+      respondentCode: matchedRespondent.code,
+      weights: matchedRespondent.ahp.weights,
+      isConsistent: matchedRespondent.ahp.isConsistent,
+      cr: matchedRespondent.ahp.cr,
+      ahp: matchedRespondent.ahp,
     };
   } else {
-    const matchedRespondent =
-      normalizedKey.toLowerCase() === "average" ||
-      normalizedKey.toLowerCase() === "custom"
-        ? undefined
-        : respondents.find(
-            (r) =>
-              r.code.toLowerCase() === normalizedKey.toLowerCase() ||
-              `r:${r.id}` === normalizedKey.toLowerCase()
-          );
-
-    if (matchedRespondent) {
-      activeSource = {
-        key: matchedRespondent.code,
-        mode: "respondent",
-        label: `${matchedRespondent.code} · ${matchedRespondent.name}`,
-        respondentId: matchedRespondent.id,
-        respondentCode: matchedRespondent.code,
-        weights: matchedRespondent.ahp.weights,
-        isConsistent: matchedRespondent.ahp.isConsistent,
-        cr: matchedRespondent.ahp.cr,
-        ahp: matchedRespondent.ahp,
-      };
-    } else {
-      activeSource = {
-        key: "average",
-        mode: "average",
-        label: `Rata-rata ${respondents.length} Responden (AIP · Paper Acuan)`,
-        respondentId: null,
-        respondentCode: null,
-        weights: average.weights,
-        isConsistent: null,
-        cr: null,
-        ahp: null,
-      };
-    }
+    activeSource = {
+      key: "average",
+      mode: "average",
+      label: `Rata-rata ${respondents.length} Responden (AIP)`,
+      respondentId: null,
+      respondentCode: null,
+      weights: average.weights,
+      isConsistent: average.isConsistent,
+      cr: average.cr,
+      ahp: null,
+    };
   }
 
   const saw = computeSaw(criteria, alternatives, activeSource.weights);
@@ -855,18 +842,9 @@ export async function getFullSpkState(
       code: "AVG",
       label: `Rata-rata ${respondents.length} Responden (AIP)`,
       mode: "average",
-      cr: null,
-      isConsistent: null,
+      cr: average.cr,
+      isConsistent: average.isConsistent,
       top3: buildTop3(average.weights),
-    },
-    {
-      key: "geomean",
-      code: "GEO",
-      label: `Geometric Mean ${respondents.length} Responden (AIJ)`,
-      mode: "geomean",
-      cr: average.groupGeometricAhp.cr,
-      isConsistent: average.groupGeometricAhp.isConsistent,
-      top3: buildTop3(average.groupGeometricAhp.weights),
     },
     ...respondents.map((resp) => ({
       key: resp.code,
@@ -879,9 +857,16 @@ export async function getFullSpkState(
     })),
   ];
 
+  const fallbackMatrix = criteria.map((row, i) =>
+    criteria.map((col, j) => (i === j ? 1 : row.id === col.id ? 1 : 1))
+  );
+
   return {
     criteria,
-    ahp: activeSource.ahp ?? average.groupGeometricAhp,
+    ahp:
+      activeSource.ahp ??
+      respondents[0]?.ahp ??
+      computeAhp(criteria, fallbackMatrix),
     alternatives,
     saw,
     respondents,

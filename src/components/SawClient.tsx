@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   formatCriterionRawValue,
   formatDecimal,
-  formatPercent,
   formatRupiah,
 } from "@/lib/format";
 import type { SpkPayload } from "@/lib/types";
@@ -113,66 +112,35 @@ export function SawClient() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <section className="rounded-xl bg-white border border-slate-200 p-6 shadow-xs space-y-3">
+      <section className="rounded-xl bg-white border border-slate-200 p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-slate-900">
-              Perhitungan &amp; Pemeringkatan Simple Additive Weighting (SAW)
+              Perhitungan &amp; Pemeringkatan SAW
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Seluruh tahapan perhitungan SAW ditampilkan secara berurutan agar
-              hasil keputusan dapat ditelusuri dan diverifikasi menggunakan
-              bobot kriteria dari <strong>{activeSource.label}</strong>.
+              Tahapan normalisasi, perkalian bobot, dan pemeringkatan alternatif
+              menggunakan <strong>{activeSource.label}</strong>.
             </p>
           </div>
-          {activeSource.mode === "average" ? (
-            <span className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border shrink-0 self-start sm:self-center bg-emerald-50 text-emerald-800 border-emerald-200">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border shrink-0 self-start sm:self-center ${
+              activeSource.isConsistent
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : "bg-amber-50 text-amber-800 border-amber-200"
+            }`}
+          >
+            {activeSource.isConsistent ? (
               <CheckCircle2 className="h-4 w-4" />
-              <span>
-                Rata-rata AIP ({respondents.length} Resp.) · CR Pendukung{" "}
-                {formatDecimal(average.groupGeometricAhp.cr, 4)}
-              </span>
+            ) : (
+              <AlertTriangle className="h-4 w-4" />
+            )}
+            <span>
+              {activeSource.label} · CR ={" "}
+              {formatDecimal(activeSource.cr ?? average.cr, 4)} (
+              {activeSource.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"})
             </span>
-          ) : (
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border shrink-0 self-start sm:self-center ${
-                activeSource.isConsistent
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                  : "bg-amber-50 text-amber-800 border-amber-200"
-              }`}
-            >
-              {activeSource.isConsistent ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                <AlertTriangle className="h-4 w-4" />
-              )}
-              <span>
-                {activeSource.label} · CR ={" "}
-                {formatDecimal(activeSource.cr ?? 0, 4)}
-              </span>
-            </span>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          {saw.criteriaStats.map((stat) => (
-            <div
-              key={stat.criterionId}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs"
-            >
-              <span className="font-mono font-semibold text-slate-800">
-                {stat.code}
-              </span>{" "}
-              <span className="text-slate-600">{stat.name}:</span>{" "}
-              <strong className="font-mono text-indigo-700">
-                {formatDecimal(stat.weight, 4)}
-              </strong>{" "}
-              <span className="text-slate-500">
-                ({formatPercent(stat.weight)} ·{" "}
-                {stat.attributeType === "cost" ? "Cost" : "Benefit"})
-              </span>
-            </div>
-          ))}
+          </span>
         </div>
       </section>
 
@@ -543,8 +511,6 @@ export function SawClient() {
                     className={
                       item.mode === "average"
                         ? "bg-indigo-50/70 font-semibold"
-                        : item.mode === "geomean"
-                        ? "bg-emerald-50/60 font-semibold"
                         : isActive
                         ? "bg-amber-50/50"
                         : "hover:bg-slate-50"
@@ -556,22 +522,17 @@ export function SawClient() {
                       </span>
                       <span className="text-slate-900">{item.label}</span>
                     </td>
-                    <td className="border border-slate-200 p-2.5 text-center font-mono">
-                      {item.cr === null ? (
-                        <span className="text-indigo-700 font-semibold">
-                          Acuan
-                        </span>
-                      ) : (
-                        <span
-                          className={`inline-flex px-1.5 py-0.5 rounded border text-[11px] ${
-                            item.isConsistent
-                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                              : "bg-amber-50 text-amber-800 border-amber-200"
-                          }`}
-                        >
-                          {formatDecimal(item.cr, 4)}
-                        </span>
-                      )}
+                    <td className="border border-slate-200 p-2.5 text-center font-mono whitespace-nowrap">
+                      <span
+                        className={`inline-flex px-2 py-0.5 rounded border text-[11px] font-semibold ${
+                          item.isConsistent
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "bg-amber-50 text-amber-800 border-amber-200"
+                        }`}
+                      >
+                        {formatDecimal(item.cr ?? 0, 4)} ·{" "}
+                        {item.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
+                      </span>
                     </td>
                     {[0, 1, 2].map((rankIdx) => {
                       const entry = item.top3[rankIdx];

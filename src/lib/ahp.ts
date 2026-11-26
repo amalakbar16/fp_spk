@@ -179,32 +179,7 @@ export function buildMatrixFromUpperPairs(
 }
 
 /**
- * Menghitung matriks agregasi kelompok menggunakan Geometric Mean (AIJ).
- */
-export function computeGeometricMeanMatrix(matrices: number[][][]): number[][] {
-  if (matrices.length === 0) {
-    throw new Error("Daftar matriks tidak boleh kosong.");
-  }
-  const n = matrices[0].length;
-  return Array.from({ length: n }, (_, i) =>
-    Array.from({ length: n }, (_, j) => {
-      if (i === j) return 1;
-      let logSum = 0;
-      for (const m of matrices) {
-        const val = m[i][j];
-        if (!Number.isFinite(val) || val <= 0) {
-          throw new Error("Semua nilai matriks harus lebih besar dari 0.");
-        }
-        logSum += Math.log(val);
-      }
-      return Math.exp(logSum / matrices.length);
-    })
-  );
-}
-
-/**
- * Menghitung rata-rata bobot prioritas AHP per kriteria dari seluruh responden (metode AIP / Tabel 2 paper acuan),
- * sekaligus menyertakan uji konsistensi matriks agregasi kelompok (Geometric Mean) sebagai verifikasi pendukung.
+ * Menghitung rata-rata bobot prioritas AHP per kriteria dari seluruh responden (metode AIP / Tabel 2 paper acuan).
  */
 export function computeAhpAverageResult(
   criteria: Criterion[],
@@ -217,12 +192,20 @@ export function computeAhpAverageResult(
     const fallback = computeAhp(criteria, identityMatrix);
     return {
       respondentCount: 0,
+      consistentCount: 0,
+      cr: 0,
+      isConsistent: true,
       weights: fallback.weights,
-      groupGeometricAhp: fallback,
     };
   }
 
   const count = individualAhpResults.length;
+  const consistentCount = individualAhpResults.filter(
+    (item) => item.isConsistent
+  ).length;
+  const cr =
+    individualAhpResults.reduce((acc, item) => acc + item.cr, 0) / count;
+  const isConsistent = cr <= 0.1;
   const rawSums = criteria.map((_, j) =>
     individualAhpResults.reduce((acc, item) => acc + (item.weights[j] ?? 0), 0)
   );
@@ -233,14 +216,11 @@ export function computeAhpAverageResult(
       ? meanWeights.map((w) => w / weightSum)
       : criteria.map(() => 1 / criteria.length);
 
-  const geoMatrix = computeGeometricMeanMatrix(
-    individualAhpResults.map((item) => item.pairwiseMatrix)
-  );
-  const groupGeometricAhp = computeAhp(criteria, geoMatrix);
-
   return {
     respondentCount: count,
+    consistentCount,
+    cr,
+    isConsistent,
     weights,
-    groupGeometricAhp,
   };
 }

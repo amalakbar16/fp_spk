@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  AlertTriangle,
-  CheckCircle2,
   Edit3,
   Plus,
   Search,
@@ -272,28 +270,6 @@ export function AlternativesClient() {
         </button>
       </section>
 
-      {/* Indikator Target 30 Alternatif */}
-      <div
-        className={`rounded-xl border p-4 flex items-center gap-3 text-sm ${
-          alternatives.length >= 30
-            ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-            : "bg-amber-50 border-amber-200 text-amber-900"
-        }`}
-      >
-        {alternatives.length >= 30 ? (
-          <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-        ) : (
-          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-        )}
-        <span>
-          Total alternatif tersimpan di MySQL:{" "}
-          <strong>{alternatives.length} data</strong>.{" "}
-          {alternatives.length >= 30
-            ? "Syarat minimal 30 alternatif pada panduan UAS sudah terpenuhi."
-            : `Tambahkan minimal ${30 - alternatives.length} data lagi agar memenuhi syarat minimal 30 alternatif pada panduan UAS.`}
-        </span>
-      </div>
-
       {error && (
         <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 text-sm text-rose-800">
           {error}
@@ -309,9 +285,9 @@ export function AlternativesClient() {
       {/* Tabel Alternatif */}
       <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-slate-800">
+          <span className="text-sm font-semibold text-slate-800">
             Menampilkan {filtered.length} dari {alternatives.length} alternatif
-          </p>
+          </span>
           <div className="relative w-full sm:w-72">
             <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input

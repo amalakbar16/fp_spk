@@ -7,7 +7,8 @@ const SYNC_EVENT = "spk-weight-source-change";
 
 function normalizeWeightSourceKey(raw?: string | null): string {
   const trimmed = raw?.trim() || "";
-  if (!trimmed || trimmed.toLowerCase() === "custom") {
+  const lower = trimmed.toLowerCase();
+  if (!trimmed || lower === "custom" || lower === "geomean") {
     return "average";
   }
   return trimmed;

@@ -143,12 +143,11 @@ export function EvaluationClient() {
       {/* Header */}
       <section className="rounded-xl bg-white border border-slate-200 p-6 shadow-xs">
         <h1 className="text-xl font-bold text-slate-900">
-          Evaluasi Hasil Keputusan &amp; Analisis Sensitivitas
+          Evaluasi Keputusan &amp; Analisis Sensitivitas
         </h1>
         <p className="text-sm text-slate-600 mt-1">
-          Memenuhi Bagian E Panduan UAS: analisis pemeringkatan tertinggi vs
-          terendah, kontribusi bobot kriteria, uji sensitivitas (total bobot =
-          1), serta evaluasi kesesuaian keputusan bagi mahasiswa menggunakan{" "}
+          Perbandingan peringkat tertinggi vs terendah, kontribusi bobot, dan
+          simulasi sensitivitas (total bobot tetap = 1) menggunakan{" "}
           <strong>{activeSource.label}</strong>.
         </p>
       </section>

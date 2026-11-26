@@ -1,15 +1,12 @@
 "use client";
 
 import {
-  AlertTriangle,
-  CheckCircle2,
   Edit3,
   ExternalLink,
   Plus,
   RotateCcw,
   Search,
   Trash2,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -187,9 +184,7 @@ export function RespondentsClient() {
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error || "Gagal mereset responden.");
-      setNotice(
-        "Daftar responden kuesioner berhasil dikembalikan ke 10 responden awal (tanpa Zakky)."
-      );
+      setNotice("Daftar responden dikembalikan ke 10 responden awal.");
       setSourceKey("average");
       await loadRespondents();
     } catch (err) {
@@ -217,7 +212,6 @@ export function RespondentsClient() {
   }
 
   const { criteria, respondents, average, nextCode } = data;
-  const consistentCount = respondents.filter((r) => r.ahp.isConsistent).length;
 
   return (
     <div className="space-y-6">
@@ -228,9 +222,8 @@ export function RespondentsClient() {
             Data Responden Kuesioner AHP
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Kelola data responden kuesioner dan 15 pasangan perbandingan Saaty
-            (CRUD penuh). Setiap perubahan otomatis memperbarui bobot rata-rata
-            di halaman Beranda, AHP, SAW, dan Evaluasi.
+            Kelola responden dan 15 pasangan perbandingan Saaty. Setiap
+            perubahan langsung memperbarui bobot rata-rata AIP.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0 self-start md:self-center">
@@ -259,53 +252,6 @@ export function RespondentsClient() {
         </div>
       </section>
 
-      {/* Ringkasan Status Responden & Konsistensi Kelompok */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 flex items-center gap-3 shadow-xs">
-          <div className="h-10 w-10 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
-            <Users className="h-5 w-5" />
-          </div>
-          <div className="text-sm">
-            <p className="font-semibold text-slate-900">
-              {respondents.length} Responden Aktif di MySQL
-            </p>
-            <p className="text-xs text-slate-600">
-              {consistentCount} responden berkonsistensi CR &le; 0,10 ·{" "}
-              {respondents.length - consistentCount} responden CR &gt; 0,10
-              (minimal 1 responden wajib tersisa).
-            </p>
-          </div>
-        </div>
-
-        <div
-          className={`rounded-xl border p-4 flex items-center gap-3 shadow-xs ${
-            average.groupGeometricAhp.isConsistent
-              ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-              : "bg-amber-50 border-amber-200 text-amber-900"
-          }`}
-        >
-          {average.groupGeometricAhp.isConsistent ? (
-            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-          ) : (
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-          )}
-          <div className="text-sm">
-            <p className="font-semibold">
-              CR Kelompok (Geometric Mean) ={" "}
-              {formatDecimal(average.groupGeometricAhp.cr, 4)} (
-              {average.groupGeometricAhp.isConsistent
-                ? "KONSISTEN ≤ 0,10"
-                : "TIDAK KONSISTEN"}
-              )
-            </p>
-            <p className="text-xs opacity-90">
-              Bobot acuan SAW menggunakan rata-rata bobot prioritas dari{" "}
-              {respondents.length} responden.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {error && (
         <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 text-sm text-rose-800">
           {error}
@@ -321,10 +267,21 @@ export function RespondentsClient() {
       {/* Tabel Responden + Search */}
       <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-slate-800">
-            Menampilkan {filteredRespondents.length} dari {respondents.length}{" "}
-            responden
-          </p>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-semibold text-slate-800">
+              {filteredRespondents.length} dari {respondents.length} responden
+            </span>
+            <span
+              className={`rounded-md border px-2 py-0.5 text-xs font-semibold font-mono ${
+                average.isConsistent
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : "bg-amber-50 text-amber-800 border-amber-200"
+              }`}
+            >
+              Rata-rata CR = {formatDecimal(average.cr, 4)} ·{" "}
+              {average.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
+            </span>
+          </div>
           <div className="relative w-full sm:w-80">
             <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -389,14 +346,14 @@ export function RespondentsClient() {
                   ))}
                   <td className="border border-slate-200 p-2.5 text-center whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold border font-mono ${
                         resp.ahp.isConsistent
                           ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                           : "bg-amber-50 text-amber-800 border-amber-200"
                       }`}
                     >
                       {formatDecimal(resp.ahp.cr, 4)} ·{" "}
-                      {resp.ahp.isConsistent ? "Konsisten" : "> 0,10"}
+                      {resp.ahp.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
                     </span>
                   </td>
                   <td className="border border-slate-200 p-2.5 text-right whitespace-nowrap">
@@ -405,10 +362,10 @@ export function RespondentsClient() {
                         href={`/ahp?source=${encodeURIComponent(resp.code)}`}
                         onClick={() => setSourceKey(resp.code)}
                         className="inline-flex items-center gap-1 rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100"
-                        title="Lihat 4 tahap matriks AHP responden ini di halaman Kriteria & AHP"
+                        title="Lihat matriks AHP responden ini"
                       >
                         <ExternalLink className="h-3 w-3" />
-                        <span>Detail AHP</span>
+                        <span>Detail</span>
                       </Link>
                       <button
                         type="button"
@@ -454,8 +411,7 @@ export function RespondentsClient() {
               <tr className="bg-indigo-50 font-bold text-indigo-950">
                 <td className="border border-slate-200 p-2.5 font-mono">AVG</td>
                 <td className="border border-slate-200 p-2.5" colSpan={2}>
-                  Rata-rata Bobot Prioritas Seluruh Responden (n ={" "}
-                  {respondents.length})
+                  Rata-rata Bobot AIP (n = {respondents.length})
                 </td>
                 {average.weights.map((w, j) => (
                   <td
@@ -465,8 +421,17 @@ export function RespondentsClient() {
                     {formatDecimal(w, 4)}
                   </td>
                 ))}
-                <td className="border border-slate-200 p-2.5 text-center font-mono text-[11px] text-indigo-700">
-                  Total = 1,0000
+                <td className="border border-slate-200 p-2.5 text-center whitespace-nowrap">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold border font-mono ${
+                      average.isConsistent
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                        : "bg-amber-50 text-amber-800 border-amber-200"
+                    }`}
+                  >
+                    {formatDecimal(average.cr, 4)} ·{" "}
+                    {average.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
+                  </span>
                 </td>
                 <td className="border border-slate-200 p-2.5 text-right text-[11px] font-semibold text-indigo-700">
                   Acuan SAW
@@ -506,8 +471,7 @@ export function RespondentsClient() {
               <strong>
                 {deleteTarget.code} · {deleteTarget.name}
               </strong>{" "}
-              akan dihapus dari MySQL dan bobot rata-rata otomatis dihitung ulang
-              dari responden yang tersisa.
+              akan dihapus dan bobot rata-rata otomatis dihitung ulang.
             </p>
             <div className="flex justify-end gap-2">
               <button

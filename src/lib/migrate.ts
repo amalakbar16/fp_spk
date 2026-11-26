@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import mysql, { type RowDataPacket } from "mysql2/promise";
-import { createPoolWithoutDatabase, getDbConfig } from "./db.ts";
+import type { RowDataPacket } from "mysql2/promise";
+import {
+  createDirectConnection,
+  createPoolWithoutDatabase,
+  getDbConfig,
+} from "./db.ts";
 
 export interface MigrationFile {
   version: string;
@@ -46,22 +50,29 @@ export function listMigrationFiles(): MigrationFile[] {
 
 async function ensureDatabaseAndMigrationsTable(): Promise<void> {
   const cfg = getDbConfig();
-  const bootstrapPool = createPoolWithoutDatabase();
+  let conn;
   try {
-    await bootstrapPool.query(
-      `CREATE DATABASE IF NOT EXISTS \`${cfg.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-    );
-  } finally {
-    await bootstrapPool.end();
-  }
+    conn = await createDirectConnection({ includeDatabase: true });
+  } catch (err) {
+    const isUnknownDb =
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code?: string }).code === "ER_BAD_DB_ERROR";
+    if (!isUnknownDb) {
+      throw err;
+    }
 
-  const conn = await mysql.createConnection({
-    host: cfg.host,
-    port: cfg.port,
-    user: cfg.user,
-    password: cfg.password,
-    database: cfg.database,
-  });
+    const bootstrapPool = createPoolWithoutDatabase();
+    try {
+      await bootstrapPool.query(
+        `CREATE DATABASE IF NOT EXISTS \`${cfg.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+      );
+    } finally {
+      await bootstrapPool.end();
+    }
+    conn = await createDirectConnection({ includeDatabase: true });
+  }
 
   try {
     await conn.query(`
@@ -81,14 +92,7 @@ async function ensureDatabaseAndMigrationsTable(): Promise<void> {
 
 export async function getMigrationStatus(): Promise<MigrationStatusItem[]> {
   await ensureDatabaseAndMigrationsTable();
-  const cfg = getDbConfig();
-  const conn = await mysql.createConnection({
-    host: cfg.host,
-    port: cfg.port,
-    user: cfg.user,
-    password: cfg.password,
-    database: cfg.database,
-  });
+  const conn = await createDirectConnection({ includeDatabase: true });
 
   try {
     const [rows] = await conn.query<RowDataPacket[]>(
@@ -122,15 +126,9 @@ export async function runMigrations(): Promise<{
   alreadyApplied: string[];
 }> {
   await ensureDatabaseAndMigrationsTable();
-  const cfg = getDbConfig();
   const files = listMigrationFiles();
-
-  const conn = await mysql.createConnection({
-    host: cfg.host,
-    port: cfg.port,
-    user: cfg.user,
-    password: cfg.password,
-    database: cfg.database,
+  const conn = await createDirectConnection({
+    includeDatabase: true,
     multipleStatements: true,
   });
 
@@ -169,14 +167,7 @@ export async function runMigrations(): Promise<{
 
 export async function dropAllTablesForFreshMigration(): Promise<void> {
   await ensureDatabaseAndMigrationsTable();
-  const cfg = getDbConfig();
-  const conn = await mysql.createConnection({
-    host: cfg.host,
-    port: cfg.port,
-    user: cfg.user,
-    password: cfg.password,
-    database: cfg.database,
-  });
+  const conn = await createDirectConnection({ includeDatabase: true });
 
   try {
     await conn.query("SET FOREIGN_KEY_CHECKS = 0");
