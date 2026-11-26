@@ -9,16 +9,17 @@ Aplikasi web **Sistem Pendukung Keputusan (SPK)** untuk pemilihan smartphone bag
 ## Setup & Menjalankan Aplikasi
 
 1. Salin `.env.example` ke `.env.local` jika belum ada, sesuaikan konfigurasi MySQL Laragon.
-2. Jalankan migration & seed database awal (6 kriteria, 36 pasangan AHP, 20 alternatif):
+2. Jalankan migration & seed database awal (6 kriteria, 10 responden Excel, 20 alternatif):
    ```powershell
-   npm run db:migrate
+   npm run db:migrate:fresh
    npm run db:seed
    ```
-   Cek status migration:
+   Atau jalankan migration inkremental / cek status migration:
    ```powershell
+   npm run db:migrate
    npm run db:migrate:status
    ```
-   Reset ulang tabel (drop, migrate ulang, dan seed ulang):
+   Reset ulang tabel sekaligus seed dalam satu perintah:
    ```powershell
    npm run db:fresh
    ```

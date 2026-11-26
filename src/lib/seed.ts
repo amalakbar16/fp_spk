@@ -6,7 +6,6 @@ import {
 } from "./migrate.ts";
 import {
   SEED_AHP_RESPONDENTS,
-  SEED_AHP_UPPER_PAIRS,
   SEED_ALTERNATIVES,
   SEED_CRITERIA,
 } from "./seed-data.ts";
@@ -39,15 +38,6 @@ async function createTablesAndSeed(forceReset = false): Promise<void> {
         ]
       );
     }
-  }
-
-  const [ahpCountRows] = await pool.query<RowDataPacket[]>(
-    "SELECT COUNT(*) AS cnt FROM ahp_comparisons"
-  );
-  const ahpCount = Number(ahpCountRows[0]?.cnt ?? 0);
-
-  if (ahpCount === 0) {
-    await seedDefaultAhpComparisons();
   }
 
   const [altCountRows] = await pool.query<RowDataPacket[]>(
@@ -135,39 +125,6 @@ export async function seedDefaultAhpRespondents(
         `INSERT IGNORE INTO ahp_respondent_comparisons (respondent_id, row_criterion_id, col_criterion_id, value)
          VALUES (?, ?, ?, ?)`,
         [respondentId, rowId, colId, value]
-      );
-    }
-  }
-}
-
-export async function seedDefaultAhpComparisons(): Promise<void> {
-  const pool = getPool();
-  const [rows] = await pool.query<RowDataPacket[]>(
-    "SELECT id, code FROM criteria ORDER BY sort_order ASC, id ASC"
-  );
-
-  await pool.query("DELETE FROM ahp_comparisons");
-
-  for (const row of rows) {
-    const rowCode = String(row.code);
-    const rowId = Number(row.id);
-    for (const col of rows) {
-      const colCode = String(col.code);
-      const colId = Number(col.id);
-      let val = 1;
-      if (rowId !== colId) {
-        const directKey = `${rowCode}:${colCode}`;
-        const reverseKey = `${colCode}:${rowCode}`;
-        if (SEED_AHP_UPPER_PAIRS[directKey] !== undefined) {
-          val = SEED_AHP_UPPER_PAIRS[directKey];
-        } else if (SEED_AHP_UPPER_PAIRS[reverseKey] !== undefined) {
-          val = 1 / SEED_AHP_UPPER_PAIRS[reverseKey];
-        }
-      }
-      await pool.query(
-        `INSERT INTO ahp_comparisons (row_criterion_id, col_criterion_id, value)
-         VALUES (?, ?, ?)`,
-        [rowId, colId, val]
       );
     }
   }

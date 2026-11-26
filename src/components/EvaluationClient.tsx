@@ -9,36 +9,26 @@ import {
 } from "@/lib/format";
 import { computeSensitivity } from "@/lib/sensitivity";
 import type { SpkPayload } from "@/lib/types";
-import { useWeightSource } from "@/lib/use-weight-source";
-import { WeightSourceBar } from "./WeightSourceBar";
 
 export function EvaluationClient() {
-  const { sourceKey, setSourceKey, hydrated } = useWeightSource();
   const [data, setData] = useState<SpkPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [targetCode, setTargetCode] = useState<string>("C1");
-  const [sliderWeight, setSliderWeight] = useState<number>(0.2021);
+  const [targetCode, setTargetCode] = useState<string>("C2");
+  const [sliderWeight, setSliderWeight] = useState<number>(0.2698);
 
   useEffect(() => {
-    if (!hydrated) return;
     let active = true;
     async function load() {
       try {
         setLoading(true);
-        const res = await fetch(
-          `/api/spk?source=${encodeURIComponent(sourceKey)}`,
-          { cache: "no-store" }
-        );
+        const res = await fetch("/api/spk", { cache: "no-store" });
         const json = (await res.json()) as SpkPayload & { error?: string };
         if (!res.ok) throw new Error(json.error || "Gagal memuat data evaluasi.");
         if (active) {
           setData(json);
-          if (json.activeSource.key !== sourceKey) {
-            setSourceKey(json.activeSource.key);
-          }
-          const weights = json.activeSource.weights;
+          const weights = json.ahp.weights;
           let maxIdx = 0;
           weights.forEach((w, idx) => {
             if (w > (weights[maxIdx] ?? 0)) maxIdx = idx;
@@ -55,18 +45,18 @@ export function EvaluationClient() {
         if (active) setLoading(false);
       }
     }
-    load();
+    void load();
     return () => {
       active = false;
     };
-  }, [hydrated, sourceKey, setSourceKey]);
+  }, []);
 
   function handleSelectCriterion(code: string) {
     if (!data) return;
     setTargetCode(code);
     const idx = data.criteria.findIndex((c) => c.code === code);
     if (idx >= 0) {
-      setSliderWeight(Number(data.activeSource.weights[idx].toFixed(4)));
+      setSliderWeight(Number(data.ahp.weights[idx].toFixed(4)));
     }
   }
 
@@ -74,7 +64,7 @@ export function EvaluationClient() {
     if (!data) return;
     const idx = data.criteria.findIndex((c) => c.code === targetCode);
     if (idx >= 0) {
-      setSliderWeight(Number(data.activeSource.weights[idx].toFixed(4)));
+      setSliderWeight(Number(data.ahp.weights[idx].toFixed(4)));
     }
   }
 
@@ -83,7 +73,7 @@ export function EvaluationClient() {
     return computeSensitivity(
       data.criteria,
       data.alternatives,
-      data.activeSource.weights,
+      data.ahp.weights,
       targetCode,
       sliderWeight
     );
@@ -100,7 +90,7 @@ export function EvaluationClient() {
         data.saw.rows.reduce((acc, r) => acc + r.weightedValues[j], 0) / nAlts;
       return {
         criterion: c,
-        weight: data.activeSource.weights[j],
+        weight: data.ahp.weights[j],
         topWeighted: top.weightedValues[j],
         bottomWeighted: bottom.weightedValues[j],
         avgWeighted,
@@ -111,7 +101,7 @@ export function EvaluationClient() {
   const sortedTopCriteria = useMemo(() => {
     if (!data) return [];
     return data.criteria
-      .map((c, idx) => ({ c, weight: data.activeSource.weights[idx] ?? 0 }))
+      .map((c, idx) => ({ c, weight: data.ahp.weights[idx] ?? 0 }))
       .sort((a, b) => b.weight - a.weight);
   }, [data]);
 
@@ -134,7 +124,7 @@ export function EvaluationClient() {
 
   if (!data || data.saw.rankings.length === 0) return null;
 
-  const { criteria, saw, respondents, average, activeSource } = data;
+  const { criteria, ahp, saw, respondents } = data;
   const topRow = saw.rankings[0];
   const bottomRow = saw.rankings[saw.rankings.length - 1];
 
@@ -147,20 +137,12 @@ export function EvaluationClient() {
         </h1>
         <p className="text-sm text-slate-600 mt-1">
           Perbandingan peringkat tertinggi vs terendah, kontribusi bobot, dan
-          simulasi sensitivitas (total bobot tetap = 1) menggunakan{" "}
-          <strong>{activeSource.label}</strong>.
+          simulasi sensitivitas (total bobot tetap = 1) menggunakan bobot{" "}
+          <strong>AHP Geometric Mean ({respondents.length} responden)</strong>.
         </p>
       </section>
 
-      <WeightSourceBar
-        sourceKey={sourceKey}
-        onChangeSource={setSourceKey}
-        respondents={respondents}
-        average={average}
-        activeSource={activeSource}
-      />
-
-      {/* E.1 Analisis Peringkat Tertinggi vs Terendah */}
+      {/* 1. Analisis Peringkat Tertinggi vs Terendah */}
       <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-4">
         <div>
           <h2 className="text-base font-bold text-slate-900">
@@ -249,7 +231,7 @@ export function EvaluationClient() {
         </div>
       </section>
 
-      {/* E.2 Analisis Kontribusi Kriteria */}
+      {/* 2. Analisis Kontribusi Kriteria */}
       <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-4">
         <div>
           <h2 className="text-base font-bold text-slate-900">
@@ -324,7 +306,7 @@ export function EvaluationClient() {
         </div>
       </section>
 
-      {/* E.3 Analisis Sensitivitas */}
+      {/* 3. Analisis Sensitivitas */}
       {sensitivity && (
         <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -361,8 +343,7 @@ export function EvaluationClient() {
               >
                 {criteria.map((c, idx) => (
                   <option key={c.id} value={c.code}>
-                    {c.code} · {c.name} (Awal:{" "}
-                    {formatPercent(activeSource.weights[idx])})
+                    {c.code} · {c.name} (Awal: {formatPercent(ahp.weights[idx])})
                   </option>
                 ))}
               </select>
@@ -540,14 +521,16 @@ export function EvaluationClient() {
         </section>
       )}
 
-      {/* E.4 Evaluasi Kesesuaian Keputusan */}
+      {/* 4. Evaluasi Kesesuaian Keputusan */}
       <section className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs space-y-2">
         <h2 className="text-base font-bold text-slate-900">
           4. Evaluasi Kesesuaian Keputusan dengan Studi Kasus Mahasiswa
         </h2>
         <p className="text-sm text-slate-700 leading-relaxed">
-          Berdasarkan sumber bobot aktif (<strong>{activeSource.label}</strong>
-          ) dengan prioritas utama pada{" "}
+          Berdasarkan bobot hasil <strong>AHP Geometric Mean</strong> (CR ={" "}
+          {formatDecimal(ahp.cr, 4)},{" "}
+          {ahp.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}) dengan prioritas
+          utama pada{" "}
           <strong>
             {sortedTopCriteria[0]?.c.name} (
             {formatPercent(sortedTopCriteria[0]?.weight ?? 0)})

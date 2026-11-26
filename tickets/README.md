@@ -51,3 +51,4 @@ Folder `tickets/` digunakan untuk mendokumentasikan **setiap rencana, setup awal
 | `015` | Penyeragaman Tampilan CR (4 Desimal + Status Konsisten) & Penghapusan Keterangan Target 30 | `DONE` | [015-seragamkan-tampilan-cr-dan-hapus-target-30.md](./015-seragamkan-tampilan-cr-dan-hapus-target-30.md) |
 | `016` | Penambahan Fitur & Menu Geometric Mean (AIJ) dengan Tampilan CR Seragam | `DONE` | [016-tambahkan-kembali-geometric-mean.md](./016-tambahkan-kembali-geometric-mean.md) |
 | `017` | Tampilan Perhitungan Langkah Demi Langkah AIP pada Menu Kriteria & AHP | `DONE` | [017-tampilan-perhitungan-aip-di-menu-ahp.md](./017-tampilan-perhitungan-aip-di-menu-ahp.md) |
+| `018` | Penyederhanaan Alur Geometric Mean → AHP → SAW & Migration Excel Kelompok 12 (3) | `DONE` | [018-alur-geomean-ahp-saw-dan-migration-excel.md](./018-alur-geomean-ahp-saw-dan-migration-excel.md) |

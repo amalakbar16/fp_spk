@@ -2,11 +2,9 @@ import { NextResponse } from "next/server";
 import { handleApiError } from "@/lib/api-error";
 import { getFullSpkState } from "@/lib/spk-repository";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const source = searchParams.get("source") ?? "average";
-    const state = await getFullSpkState(source);
+    const state = await getFullSpkState();
     return NextResponse.json(state);
   } catch (err) {
     return handleApiError(err);

@@ -17,36 +17,24 @@ import {
   formatRupiah,
 } from "@/lib/format";
 import type { SpkPayload } from "@/lib/types";
-import { useWeightSource } from "@/lib/use-weight-source";
-import { WeightSourceBar } from "./WeightSourceBar";
 
 export function OverviewClient() {
-  const { sourceKey, setSourceKey, hydrated } = useWeightSource();
   const [data, setData] = useState<SpkPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!hydrated) return;
     let active = true;
     async function load() {
       try {
         setLoading(true);
-        const res = await fetch(
-          `/api/spk?source=${encodeURIComponent(sourceKey)}`,
-          { cache: "no-store" }
-        );
+        const res = await fetch("/api/spk", { cache: "no-store" });
         const json = (await res.json()) as SpkPayload & { error?: string };
         if (!res.ok) {
-          throw new Error(
-            (json as { error?: string }).error || "Gagal memuat data SPK."
-          );
+          throw new Error(json.error || "Gagal memuat data SPK.");
         }
         if (active) {
           setData(json);
-          if (json.activeSource.key !== sourceKey) {
-            setSourceKey(json.activeSource.key);
-          }
           setError(null);
         }
       } catch (err) {
@@ -57,11 +45,11 @@ export function OverviewClient() {
         if (active) setLoading(false);
       }
     }
-    load();
+    void load();
     return () => {
       active = false;
     };
-  }, [hydrated, sourceKey, setSourceKey]);
+  }, []);
 
   if (loading && !data) {
     return (
@@ -90,14 +78,7 @@ export function OverviewClient() {
 
   if (!data) return null;
 
-  const {
-    criteria,
-    alternatives,
-    saw,
-    respondents,
-    average,
-    activeSource,
-  } = data;
+  const { criteria, ahp, alternatives, saw, respondents } = data;
   const topAlt = saw.rankings[0];
   const altById = new Map(alternatives.map((a) => [a.id, a]));
   const costCount = criteria.filter((c) => c.attributeType === "cost").length;
@@ -113,8 +94,9 @@ export function OverviewClient() {
               SPK Pemilihan Smartphone Bagi Mahasiswa
             </h1>
             <p className="text-sm text-slate-600 max-w-2xl">
-              Pembobotan kriteria menggunakan <strong>AHP</strong> (rata-rata
-              bobot responden AIP) dan pemeringkatan alternatif menggunakan{" "}
+              Alur terstruktur: agregasi kuesioner responden dengan{" "}
+              <strong>Geometric Mean</strong>, pembobotan kriteria dengan{" "}
+              <strong>AHP</strong>, dan pemeringkatan alternatif dengan{" "}
               <strong>SAW</strong>.
             </p>
           </div>
@@ -123,7 +105,7 @@ export function OverviewClient() {
               href="/ahp"
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              <span>Kriteria &amp; AHP</span>
+              <span>Geometric Mean &amp; AHP</span>
             </Link>
             <Link
               href="/saw"
@@ -136,23 +118,15 @@ export function OverviewClient() {
         </div>
       </section>
 
-      <WeightSourceBar
-        sourceKey={sourceKey}
-        onChangeSource={setSourceKey}
-        respondents={respondents}
-        average={average}
-        activeSource={activeSource}
-      />
-
       {/* 4 KPI Cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>KRITERIA &amp; RESPONDEN</span>
+            <span>RESPONDEN &amp; KRITERIA</span>
             <Scale className="h-4 w-4 text-indigo-600" />
           </div>
           <p className="mt-2 text-2xl font-bold text-slate-900">
-            {criteria.length} Kriteria · {respondents.length} Resp.
+            {respondents.length} Resp. · {criteria.length} Kriteria
           </p>
           <p className="mt-1 text-xs text-slate-600">
             {costCount} Cost · {benefitCount} Benefit
@@ -180,21 +154,21 @@ export function OverviewClient() {
         <div className="rounded-xl bg-white border border-slate-200 p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
             <span>CONSISTENCY RATIO (AHP)</span>
-            {activeSource.isConsistent ? (
+            {ahp.isConsistent ? (
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             ) : (
               <AlertTriangle className="h-4 w-4 text-amber-600" />
             )}
           </div>
           <p className="mt-2 text-2xl font-bold text-slate-900 font-mono">
-            CR = {formatDecimal(activeSource.cr ?? average.cr, 4)}
+            CR = {formatDecimal(ahp.cr, 4)}
           </p>
           <p
             className={`mt-1 text-xs font-semibold ${
-              activeSource.isConsistent ? "text-emerald-700" : "text-amber-700"
+              ahp.isConsistent ? "text-emerald-700" : "text-amber-700"
             }`}
           >
-            {activeSource.isConsistent
+            {ahp.isConsistent
               ? "KONSISTEN (CR ≤ 0,10)"
               : "TIDAK KONSISTEN (CR > 0,10)"}
           </p>
@@ -225,7 +199,9 @@ export function OverviewClient() {
               <h2 className="text-base font-bold text-slate-900">
                 Bobot Prioritas Kriteria
               </h2>
-              <p className="text-xs text-slate-500">{activeSource.label}</p>
+              <p className="text-xs text-slate-500">
+                Hasil AHP Geometric Mean ({respondents.length} Responden)
+              </p>
             </div>
             <Link
               href="/ahp"
@@ -236,7 +212,7 @@ export function OverviewClient() {
           </div>
           <div className="space-y-3">
             {criteria.map((c, idx) => {
-              const weight = activeSource.weights[idx] ?? 0;
+              const weight = ahp.weights[idx] ?? 0;
               return (
                 <div key={c.id} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">

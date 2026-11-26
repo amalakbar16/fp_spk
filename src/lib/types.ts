@@ -110,8 +110,6 @@ export interface SensitivityResult {
   rows: SensitivityRow[];
 }
 
-export type WeightSourceMode = "average" | "geomean" | "respondent";
-
 export interface AhpRespondent {
   id: number;
   code: string;
@@ -122,49 +120,10 @@ export interface AhpRespondent {
   ahp: AhpResult;
 }
 
-export interface AhpAverageResult {
-  respondentCount: number;
-  consistentCount: number;
-  cr: number;
-  isConsistent: boolean;
-  weights: number[];
-  groupGeometricAhp: AhpResult;
-}
-
-export interface SpkWeightSourceInfo {
-  key: string;
-  mode: WeightSourceMode;
-  label: string;
-  respondentId: number | null;
-  respondentCode: string | null;
-  weights: number[];
-  isConsistent: boolean | null;
-  cr: number | null;
-  ahp: AhpResult | null;
-}
-
-export interface RespondentTopSummary {
-  key: string;
-  code: string;
-  label: string;
-  mode: WeightSourceMode;
-  cr: number | null;
-  isConsistent: boolean | null;
-  top3: Array<{
-    rank: number;
-    code: string;
-    name: string;
-    vi: number;
-  }>;
-}
-
 export interface SpkPayload {
   criteria: Criterion[];
+  respondents: AhpRespondent[];
   ahp: AhpResult;
   alternatives: Alternative[];
   saw: SawResult;
-  respondents: AhpRespondent[];
-  average: AhpAverageResult;
-  activeSource: SpkWeightSourceInfo;
-  respondentTopSummaries: RespondentTopSummary[];
 }

@@ -1,5 +1,4 @@
 import type {
-  AhpAverageResult,
   AhpConsistencyRow,
   AhpResult,
   Criterion,
@@ -203,56 +202,22 @@ export function computeGeometricMeanMatrix(matrices: number[][][]): number[][] {
 }
 
 /**
- * Menghitung rata-rata bobot prioritas AHP per kriteria (AIP / Tabel 2 paper acuan)
- * sekaligus menyediakan agregasi matriks Geometric Mean (AIJ).
+ * Menggabungkan matriks pairwise seluruh responden dengan Geometric Mean (AIJ)
+ * lalu menghitung bobot prioritas dan uji konsistensi AHP (mengacu Excel Kelompok 12).
  */
-export function computeAhpAverageResult(
+export function computeGroupGeometricAhp(
   criteria: Criterion[],
   individualAhpResults: AhpResult[]
-): AhpAverageResult {
+): AhpResult {
   if (individualAhpResults.length === 0) {
     const identityMatrix = criteria.map((_, i) =>
       criteria.map((__, j) => (i === j ? 1 : 1))
     );
-    const fallback = computeAhp(criteria, identityMatrix);
-    return {
-      respondentCount: 0,
-      consistentCount: 0,
-      cr: 0,
-      isConsistent: true,
-      weights: fallback.weights,
-      groupGeometricAhp: fallback,
-    };
+    return computeAhp(criteria, identityMatrix);
   }
-
-  const count = individualAhpResults.length;
-  const consistentCount = individualAhpResults.filter(
-    (item) => item.isConsistent
-  ).length;
-  const cr =
-    individualAhpResults.reduce((acc, item) => acc + item.cr, 0) / count;
-  const isConsistent = cr <= 0.1;
-  const rawSums = criteria.map((_, j) =>
-    individualAhpResults.reduce((acc, item) => acc + (item.weights[j] ?? 0), 0)
-  );
-  const meanWeights = rawSums.map((sum) => sum / count);
-  const weightSum = meanWeights.reduce((acc, w) => acc + w, 0);
-  const weights =
-    weightSum > 0
-      ? meanWeights.map((w) => w / weightSum)
-      : criteria.map(() => 1 / criteria.length);
 
   const geoMatrix = computeGeometricMeanMatrix(
     individualAhpResults.map((item) => item.pairwiseMatrix)
   );
-  const groupGeometricAhp = computeAhp(criteria, geoMatrix);
-
-  return {
-    respondentCount: count,
-    consistentCount,
-    cr,
-    isConsistent,
-    weights,
-    groupGeometricAhp,
-  };
+  return computeAhp(criteria, geoMatrix);
 }

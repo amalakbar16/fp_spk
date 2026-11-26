@@ -84,28 +84,6 @@ export const SEED_CRITERIA: SeedCriterion[] = [
   },
 ];
 
-/**
- * Matriks pairwise comparison 6x6 dari sheet PERHITUNGAN AHP.
- * Segitiga atas menggunakan nilai eksak Saaty; bawah otomatis 1 / a_ij.
- */
-export const SEED_AHP_UPPER_PAIRS: Record<string, number> = {
-  "C1:C2": 3,
-  "C1:C3": 3,
-  "C1:C4": 3,
-  "C1:C5": 5,
-  "C1:C6": 7,
-  "C2:C3": 3,
-  "C2:C4": 1,
-  "C2:C5": 1,
-  "C2:C6": 5,
-  "C3:C4": 1,
-  "C3:C5": 3,
-  "C3:C6": 5,
-  "C4:C5": 5,
-  "C4:C6": 3,
-  "C5:C6": 3,
-};
-
 type RawAltSeed = Omit<SeedAlternative, "cameraScore">;
 
 const RAW_ALTERNATIVES: RawAltSeed[] = [
@@ -456,7 +434,7 @@ export interface SeedAhpRespondent {
 }
 
 /**
- * Data 10 responden unik hasil kuesioner AHP (duplikat tidak konsisten "Zakky" dikecualikan).
+ * Data 10 responden hasil kuesioner AHP sesuai sheet RESPONDEN pada Excel SPK - Kelompok 12 (3).xlsx.
  */
 export const SEED_AHP_RESPONDENTS: SeedAhpRespondent[] = [
   {
@@ -576,29 +554,6 @@ export const SEED_AHP_RESPONDENTS: SeedAhpRespondent[] = [
   },
   {
     code: "R6",
-    name: "Cogan",
-    role: "Mahasiswa Aktif",
-    submittedAt: "2026-11-25 20:29:52",
-    upperPairs: {
-      "C1:C2": 1,
-      "C1:C3": 1,
-      "C1:C4": 3,
-      "C1:C5": 9,
-      "C1:C6": 9,
-      "C2:C3": 9,
-      "C2:C4": 9,
-      "C2:C5": 9,
-      "C2:C6": 1,
-      "C3:C4": 9,
-      "C3:C5": 9,
-      "C3:C6": 9,
-      "C4:C5": 9,
-      "C4:C6": 9,
-      "C5:C6": 7,
-    },
-  },
-  {
-    code: "R7",
     name: "Ahnaf",
     role: "Mahasiswa Aktif",
     submittedAt: "2026-11-25 20:30:49",
@@ -621,7 +576,7 @@ export const SEED_AHP_RESPONDENTS: SeedAhpRespondent[] = [
     },
   },
   {
-    code: "R8",
+    code: "R7",
     name: "Vano",
     role: "Mahasiswa Aktif",
     submittedAt: "2026-11-25 20:45:39",
@@ -644,7 +599,7 @@ export const SEED_AHP_RESPONDENTS: SeedAhpRespondent[] = [
     },
   },
   {
-    code: "R9",
+    code: "R8",
     name: "Zaki",
     role: "Mahasiswa Aktif",
     submittedAt: "2026-11-25 21:41:22",
@@ -667,7 +622,7 @@ export const SEED_AHP_RESPONDENTS: SeedAhpRespondent[] = [
     },
   },
   {
-    code: "R10",
+    code: "R9",
     name: "Glenn Aurora Arapenta Surbakti",
     role: "Mahasiswa Aktif",
     submittedAt: "2026-11-25 21:58:10",
@@ -686,6 +641,29 @@ export const SEED_AHP_RESPONDENTS: SeedAhpRespondent[] = [
       "C3:C6": 7,
       "C4:C5": 5,
       "C4:C6": 3,
+      "C5:C6": 5,
+    },
+  },
+  {
+    code: "R10",
+    name: "Auf",
+    role: "Mahasiswa Aktif",
+    submittedAt: "2026-11-26 13:29:20",
+    upperPairs: {
+      "C1:C2": 3,
+      "C1:C3": 5,
+      "C1:C4": 7,
+      "C1:C5": 3,
+      "C1:C6": 3,
+      "C2:C3": 3,
+      "C2:C4": 3,
+      "C2:C5": 5,
+      "C2:C6": 5,
+      "C3:C4": 3,
+      "C3:C5": 5,
+      "C3:C6": 5,
+      "C4:C5": 5,
+      "C4:C6": 7,
       "C5:C6": 5,
     },
   },

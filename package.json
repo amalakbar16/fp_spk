@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "node --env-file-if-exists=.env.local src/lib/migrate-cli.ts up",
+    "db:migrate:fresh": "node --env-file-if-exists=.env.local src/lib/migrate-cli.ts fresh",
     "db:migrate:status": "node --env-file-if-exists=.env.local src/lib/migrate-cli.ts status",
     "db:seed": "node --env-file-if-exists=.env.local src/lib/seed-cli.ts",
     "db:fresh": "node --env-file-if-exists=.env.local src/lib/seed-cli.ts --reset",

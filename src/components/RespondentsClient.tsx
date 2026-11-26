@@ -1,33 +1,30 @@
 "use client";
 
 import {
+  ArrowRight,
   Edit3,
-  ExternalLink,
+  Eye,
   Plus,
   RotateCcw,
   Search,
   Trash2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDecimal } from "@/lib/format";
-import type {
-  AhpAverageResult,
-  AhpRespondent,
-  Criterion,
-} from "@/lib/types";
-import { useWeightSource } from "@/lib/use-weight-source";
+import type { AhpRespondent, AhpResult, Criterion } from "@/lib/types";
+import { AhpCalculationView } from "./AhpCalculationView";
 import { RespondentModal } from "./RespondentModal";
 
 interface RespondentsApiPayload {
   criteria: Criterion[];
   respondents: AhpRespondent[];
-  average: AhpAverageResult;
+  groupAhp: AhpResult;
   nextCode: string;
 }
 
 export function RespondentsClient() {
-  const { setSourceKey } = useWeightSource();
   const [data, setData] = useState<RespondentsApiPayload | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -38,6 +35,8 @@ export function RespondentsClient() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRespondent, setEditingRespondent] =
+    useState<AhpRespondent | null>(null);
+  const [detailRespondent, setDetailRespondent] =
     useState<AhpRespondent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AhpRespondent | null>(null);
 
@@ -163,7 +162,6 @@ export function RespondentsClient() {
       const deletedName = deleteTarget.name;
       setDeleteTarget(null);
       setNotice(`Responden ${deletedCode} (${deletedName}) berhasil dihapus.`);
-      setSourceKey("average");
       await loadRespondents();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menghapus responden.");
@@ -184,8 +182,7 @@ export function RespondentsClient() {
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error || "Gagal mereset responden.");
-      setNotice("Daftar responden dikembalikan ke 10 responden awal.");
-      setSourceKey("average");
+      setNotice("Daftar responden dikembalikan ke 10 responden awal Excel.");
       await loadRespondents();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mereset responden.");
@@ -211,7 +208,7 @@ export function RespondentsClient() {
     );
   }
 
-  const { criteria, respondents, average, nextCode } = data;
+  const { criteria, respondents, groupAhp, nextCode } = data;
 
   return (
     <div className="space-y-6">
@@ -222,8 +219,9 @@ export function RespondentsClient() {
             Data Responden Kuesioner AHP
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Kelola responden dan 15 pasangan perbandingan Saaty. Setiap
-            perubahan langsung memperbarui bobot rata-rata AIP.
+            Kelola responden dan 15 pasangan perbandingan skala Saaty (1–9).
+            Setiap perubahan otomatis memperbarui perhitungan{" "}
+            <strong>Geometric Mean &amp; AHP</strong>.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0 self-start md:self-center">
@@ -273,13 +271,13 @@ export function RespondentsClient() {
             </span>
             <span
               className={`rounded-md border px-2 py-0.5 text-xs font-semibold font-mono ${
-                average.isConsistent
+                groupAhp.isConsistent
                   ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                   : "bg-amber-50 text-amber-800 border-amber-200"
               }`}
             >
-              Rata-rata CR = {formatDecimal(average.cr, 4)} ·{" "}
-              {average.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
+              GeoMean CR = {formatDecimal(groupAhp.cr, 4)} ·{" "}
+              {groupAhp.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
             </span>
           </div>
           <div className="relative w-full sm:w-80">
@@ -358,15 +356,15 @@ export function RespondentsClient() {
                   </td>
                   <td className="border border-slate-200 p-2.5 text-right whitespace-nowrap">
                     <div className="inline-flex items-center gap-1.5">
-                      <Link
-                        href={`/ahp?source=${encodeURIComponent(resp.code)}`}
-                        onClick={() => setSourceKey(resp.code)}
+                      <button
+                        type="button"
+                        onClick={() => setDetailRespondent(resp)}
                         className="inline-flex items-center gap-1 rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100"
                         title="Lihat matriks AHP responden ini"
                       >
-                        <ExternalLink className="h-3 w-3" />
+                        <Eye className="h-3 w-3" />
                         <span>Detail</span>
-                      </Link>
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -409,11 +407,11 @@ export function RespondentsClient() {
                 </tr>
               )}
               <tr className="bg-indigo-50 font-bold text-indigo-950">
-                <td className="border border-slate-200 p-2.5 font-mono">AVG</td>
+                <td className="border border-slate-200 p-2.5 font-mono">GEO</td>
                 <td className="border border-slate-200 p-2.5" colSpan={2}>
-                  Rata-rata Bobot AIP (n = {respondents.length})
+                  Hasil Geometric Mean AHP (n = {respondents.length})
                 </td>
-                {average.weights.map((w, j) => (
+                {groupAhp.weights.map((w, j) => (
                   <td
                     key={criteria[j].id}
                     className="border border-slate-200 p-2.5 text-right font-mono text-indigo-800"
@@ -424,23 +422,64 @@ export function RespondentsClient() {
                 <td className="border border-slate-200 p-2.5 text-center whitespace-nowrap">
                   <span
                     className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold border font-mono ${
-                      average.isConsistent
+                      groupAhp.isConsistent
                         ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                         : "bg-amber-50 text-amber-800 border-amber-200"
                     }`}
                   >
-                    {formatDecimal(average.cr, 4)} ·{" "}
-                    {average.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
+                    {formatDecimal(groupAhp.cr, 4)} ·{" "}
+                    {groupAhp.isConsistent ? "KONSISTEN" : "TIDAK KONSISTEN"}
                   </span>
                 </td>
-                <td className="border border-slate-200 p-2.5 text-right text-[11px] font-semibold text-indigo-700">
-                  Acuan SAW
+                <td className="border border-slate-200 p-2.5 text-right whitespace-nowrap">
+                  <Link
+                    href="/ahp"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 hover:underline"
+                  >
+                    <span>Tahapan AHP</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
+
+      {/* Modal Detail Matriks Responden */}
+      {detailRespondent && (
+        <div className="fixed inset-0 z-50 bg-slate-900/45 flex items-center justify-center p-4">
+          <div className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-xl bg-slate-50 border border-slate-200 p-5 shadow-xl space-y-4">
+            <div className="flex items-center justify-between bg-white rounded-xl border border-slate-200 p-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Detail Kuesioner &amp; Matriks AHP — {detailRespondent.code} (
+                  {detailRespondent.name})
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {detailRespondent.role} · {detailRespondent.submittedAt}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailRespondent(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <AhpCalculationView
+              title={`Matriks Perbandingan Individu (${detailRespondent.code})`}
+              subtitle="Perbandingan berpasangan skala Saaty responden sebelum digabungkan dengan Geometric Mean."
+              criteria={criteria}
+              ahp={detailRespondent.ahp}
+              editable={false}
+              showFractionLabels={true}
+              sectionOffset={1}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Modal Tambah / Edit Responden */}
       {modalOpen && (
@@ -471,7 +510,7 @@ export function RespondentsClient() {
               <strong>
                 {deleteTarget.code} · {deleteTarget.name}
               </strong>{" "}
-              akan dihapus dan bobot rata-rata otomatis dihitung ulang.
+              akan dihapus dan bobot Geometric Mean otomatis dihitung ulang.
             </p>
             <div className="flex justify-end gap-2">
               <button

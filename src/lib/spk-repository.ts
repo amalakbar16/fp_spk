@@ -2,25 +2,21 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import {
   buildMatrixFromUpperPairs,
   computeAhp,
-  computeAhpAverageResult,
+  computeGroupGeometricAhp,
 } from "./ahp.ts";
 import { calculateCameraScore } from "./camera-score.ts";
 import { getPool } from "./db.ts";
 import { computeSaw } from "./saw.ts";
 import {
   ensureDatabaseInitialized,
-  seedDefaultAhpComparisons,
   seedDefaultAhpRespondents,
 } from "./seed.ts";
 import type {
   AhpRespondent,
-  AhpResult,
   Alternative,
   AttributeType,
   Criterion,
-  RespondentTopSummary,
   SpkPayload,
-  SpkWeightSourceInfo,
 } from "./types.ts";
 
 interface CriterionRow extends RowDataPacket {
@@ -31,12 +27,6 @@ interface CriterionRow extends RowDataPacket {
   unit: string;
   scale_description: string;
   sort_order: number;
-}
-
-interface AhpComparisonRow extends RowDataPacket {
-  row_criterion_id: number;
-  col_criterion_id: number;
-  value: number;
 }
 
 interface AhpRespondentRow extends RowDataPacket {
@@ -137,99 +127,6 @@ export async function updateCriterion(input: {
     ]
   );
   return getAllCriteria();
-}
-
-export async function getAhpState(): Promise<{
-  criteria: Criterion[];
-  ahp: AhpResult;
-}> {
-  const criteria = await getAllCriteria();
-  const pool = getPool();
-  const [rows] = await pool.query<AhpComparisonRow[]>(
-    "SELECT row_criterion_id, col_criterion_id, value FROM ahp_comparisons"
-  );
-
-  const pairMap = new Map<string, number>();
-  for (const r of rows) {
-    pairMap.set(
-      `${Number(r.row_criterion_id)}:${Number(r.col_criterion_id)}`,
-      Number(r.value)
-    );
-  }
-
-  const matrix = criteria.map((rowCrit) =>
-    criteria.map((colCrit) => {
-      if (rowCrit.id === colCrit.id) return 1;
-      const direct = pairMap.get(`${rowCrit.id}:${colCrit.id}`);
-      if (direct !== undefined && direct > 0) return direct;
-      const reverse = pairMap.get(`${colCrit.id}:${rowCrit.id}`);
-      if (reverse !== undefined && reverse > 0) return 1 / reverse;
-      return 1;
-    })
-  );
-
-  return {
-    criteria,
-    ahp: computeAhp(criteria, matrix),
-  };
-}
-
-export async function saveAhpPairs(
-  pairs: Array<{ rowCriterionId: number; colCriterionId: number; value: number }>
-): Promise<{ criteria: Criterion[]; ahp: AhpResult }> {
-  await ensureDatabaseInitialized();
-  const pool = getPool();
-  const conn = await pool.getConnection();
-
-  try {
-    await conn.beginTransaction();
-    for (const pair of pairs) {
-      if (pair.rowCriterionId === pair.colCriterionId) {
-        await conn.query(
-          `INSERT INTO ahp_comparisons (row_criterion_id, col_criterion_id, value)
-           VALUES (?, ?, 1)
-           ON DUPLICATE KEY UPDATE value = 1`,
-          [pair.rowCriterionId, pair.colCriterionId]
-        );
-        continue;
-      }
-
-      if (!Number.isFinite(pair.value) || pair.value <= 0) {
-        throw new Error("Nilai perbandingan harus lebih besar dari 0.");
-      }
-
-      await conn.query(
-        `INSERT INTO ahp_comparisons (row_criterion_id, col_criterion_id, value)
-         VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE value = VALUES(value)`,
-        [pair.rowCriterionId, pair.colCriterionId, pair.value]
-      );
-
-      await conn.query(
-        `INSERT INTO ahp_comparisons (row_criterion_id, col_criterion_id, value)
-         VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE value = VALUES(value)`,
-        [pair.colCriterionId, pair.rowCriterionId, 1 / pair.value]
-      );
-    }
-    await conn.commit();
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
-
-  return getAhpState();
-}
-
-export async function resetAhpMatrix(): Promise<{
-  criteria: Criterion[];
-  ahp: AhpResult;
-}> {
-  await ensureDatabaseInitialized();
-  await seedDefaultAhpComparisons();
-  return getAhpState();
 }
 
 export async function getAllAlternatives(): Promise<Alternative[]> {
@@ -619,7 +516,7 @@ export async function getAllAhpRespondents(
     })
     .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
 
-  const average = computeAhpAverageResult(
+  const groupAhp = computeGroupGeometricAhp(
     criteria,
     respondents.map((r) => r.ahp)
   );
@@ -627,7 +524,7 @@ export async function getAllAhpRespondents(
   return {
     criteria,
     respondents,
-    average,
+    groupAhp,
   };
 }
 
@@ -775,118 +672,19 @@ export async function resetAhpRespondents() {
   return getAllAhpRespondents();
 }
 
-export async function getFullSpkState(
-  sourceKey = "average"
-): Promise<SpkPayload> {
+export async function getFullSpkState(): Promise<SpkPayload> {
   const [criteria, alternatives] = await Promise.all([
     getAllCriteria(),
     getAllAlternatives(),
   ]);
-  const { respondents, average } = await getAllAhpRespondents(criteria);
-
-  const normalizedKey = sourceKey.trim() || "average";
-  let activeSource: SpkWeightSourceInfo;
-
-  if (normalizedKey.toLowerCase() === "geomean") {
-    activeSource = {
-      key: "geomean",
-      mode: "geomean",
-      label: `Geometric Mean ${respondents.length} Resp. (AIJ)`,
-      respondentId: null,
-      respondentCode: null,
-      weights: average.groupGeometricAhp.weights,
-      isConsistent: average.groupGeometricAhp.isConsistent,
-      cr: average.groupGeometricAhp.cr,
-      ahp: average.groupGeometricAhp,
-    };
-  } else {
-    const matchedRespondent =
-      normalizedKey.toLowerCase() === "average" ||
-      normalizedKey.toLowerCase() === "custom"
-        ? undefined
-        : respondents.find(
-            (r) =>
-              r.code.toLowerCase() === normalizedKey.toLowerCase() ||
-              `r:${r.id}` === normalizedKey.toLowerCase()
-          );
-
-    if (matchedRespondent) {
-      activeSource = {
-        key: matchedRespondent.code,
-        mode: "respondent",
-        label: `${matchedRespondent.code} · ${matchedRespondent.name}`,
-        respondentId: matchedRespondent.id,
-        respondentCode: matchedRespondent.code,
-        weights: matchedRespondent.ahp.weights,
-        isConsistent: matchedRespondent.ahp.isConsistent,
-        cr: matchedRespondent.ahp.cr,
-        ahp: matchedRespondent.ahp,
-      };
-    } else {
-      activeSource = {
-        key: "average",
-        mode: "average",
-        label: `Rata-rata ${respondents.length} Responden (AIP)`,
-        respondentId: null,
-        respondentCode: null,
-        weights: average.weights,
-        isConsistent: average.isConsistent,
-        cr: average.cr,
-        ahp: null,
-      };
-    }
-  }
-
-  const saw = computeSaw(criteria, alternatives, activeSource.weights);
-
-  const buildTop3 = (weights: number[]) =>
-    computeSaw(criteria, alternatives, weights)
-      .rankings.slice(0, 3)
-      .map((r) => ({
-        rank: r.rank,
-        code: r.code,
-        name: r.name,
-        vi: r.vi,
-      }));
-
-  const respondentTopSummaries: RespondentTopSummary[] = [
-    {
-      key: "average",
-      code: "AVG",
-      label: `Rata-rata ${respondents.length} Responden (AIP)`,
-      mode: "average",
-      cr: average.cr,
-      isConsistent: average.isConsistent,
-      top3: buildTop3(average.weights),
-    },
-    {
-      key: "geomean",
-      code: "GEO",
-      label: `Geometric Mean ${respondents.length} Responden (AIJ)`,
-      mode: "geomean",
-      cr: average.groupGeometricAhp.cr,
-      isConsistent: average.groupGeometricAhp.isConsistent,
-      top3: buildTop3(average.groupGeometricAhp.weights),
-    },
-    ...respondents.map((resp) => ({
-      key: resp.code,
-      code: resp.code,
-      label: resp.name,
-      mode: "respondent" as const,
-      cr: resp.ahp.cr,
-      isConsistent: resp.ahp.isConsistent,
-      top3: buildTop3(resp.ahp.weights),
-    })),
-  ];
+  const { respondents, groupAhp } = await getAllAhpRespondents(criteria);
+  const saw = computeSaw(criteria, alternatives, groupAhp.weights);
 
   return {
     criteria,
-    ahp: activeSource.ahp ?? average.groupGeometricAhp,
+    respondents,
+    ahp: groupAhp,
     alternatives,
     saw,
-    respondents,
-    average,
-    activeSource,
-    respondentTopSummaries,
   };
 }

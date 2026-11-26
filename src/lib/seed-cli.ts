@@ -6,10 +6,14 @@ const shouldReset = process.argv.includes("--reset");
 async function main() {
   if (shouldReset) {
     await resetAndSeedDatabase();
-    console.log("Database fp_spk_smartphone di-reset dan di-seed ulang (6 kriteria, 20 alternatif).");
+    console.log(
+      "Database fp_spk_smartphone di-reset dan di-seed ulang (6 kriteria, 10 responden Excel, 20 alternatif)."
+    );
   } else {
     await ensureDatabaseInitialized();
-    console.log("Database fp_spk_smartphone siap dan terisi data awal.");
+    console.log(
+      "Database fp_spk_smartphone siap dan terisi data awal sesuai Excel (6 kriteria, 10 responden, 20 alternatif)."
+    );
   }
   await getPool().end();
 }

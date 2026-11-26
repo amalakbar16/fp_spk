@@ -12,6 +12,7 @@ interface AhpCalculationViewProps {
   criteria: Criterion[];
   ahp: AhpResult;
   editable?: boolean;
+  showFractionLabels?: boolean;
   onPairChange?: (rowIdx: number, colIdx: number, value: number) => void;
   headerActions?: ReactNode;
   sectionOffset?: number;
@@ -23,6 +24,7 @@ export function AhpCalculationView({
   criteria,
   ahp,
   editable = true,
+  showFractionLabels = false,
   onPairChange,
   headerActions,
   sectionOffset = 2,
@@ -103,16 +105,19 @@ export function AhpCalculationView({
                     return (
                       <td
                         key={colCrit.id}
-                        className="border border-slate-200 bg-slate-50 p-2 text-center font-mono text-slate-600"
+                        className="border border-slate-200 bg-slate-50 p-2 text-center font-mono text-slate-700"
                         title={
                           i < j
                             ? `${rowCrit.code} vs ${colCrit.code}`
-                            : `Kebalikan otomatis (1 / ${formatSaatyValue(
-                                ahp.pairwiseMatrix[j][i]
+                            : `Resiprokal otomatis (1 / ${formatDecimal(
+                                ahp.pairwiseMatrix[j][i],
+                                4
                               )})`
                         }
                       >
-                        {formatSaatyValue(val)} ({formatDecimal(val, 3)})
+                        {showFractionLabels
+                          ? `${formatSaatyValue(val)} (${formatDecimal(val, 4)})`
+                          : formatDecimal(val, 4)}
                       </td>
                     );
                   })}
@@ -191,6 +196,34 @@ export function AhpCalculationView({
                   </td>
                 </tr>
               ))}
+              <tr className="bg-slate-100 font-bold text-slate-900">
+                <td className="border border-slate-200 p-2">TOTAL</td>
+                {criteria.map((c, j) => (
+                  <td
+                    key={c.id}
+                    className="border border-slate-200 p-2 text-center font-mono"
+                  >
+                    {formatDecimal(
+                      ahp.normalizedMatrix.reduce(
+                        (acc, row) => acc + (row[j] ?? 0),
+                        0
+                      ),
+                      4
+                    )}
+                  </td>
+                ))}
+                <td className="border border-slate-200 p-2 text-center font-mono text-indigo-800 bg-indigo-50">
+                  {formatDecimal(
+                    ahp.weights.reduce((acc, w) => acc + w, 0),
+                    6
+                  )}
+                </td>
+                <td className="border border-slate-200 p-2 text-center font-mono text-indigo-800 bg-indigo-50">
+                  {formatPercent(
+                    ahp.weights.reduce((acc, w) => acc + w, 0)
+                  )}
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
